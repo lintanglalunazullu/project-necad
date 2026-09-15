@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Informasi | SMP Negeri 2 Cibungbulang</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet">
+<link rel="icon" type="image/webp" href="../image/images.webp">
+<style>
+  :root{
+    --navy-900:#0B2545; --navy-800:#0F3166; --blue-600:#1B4F91; --blue-500:#2563AC;
+    --gold-500:#F5B301; --gold-600:#DE9F00; --teal-500:#14919B; --ink:#0B2545;
+    --slate-500:#5B6B82; --slate-300:#B9C4D6; --bg-soft:#F5F8FC; --white:#FFFFFF;
+    --shadow-sm:0 2px 10px rgba(11,37,69,0.06); --shadow-md:0 12px 32px rgba(11,37,69,0.10);
+    --radius-lg:20px; --radius-md:14px; --radius-full:999px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{font-family:'Nunito Sans',sans-serif;color:var(--ink);background:var(--white);-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.brand,nav a,.btn{font-family:'Poppins',sans-serif;}
+  a{text-decoration:none;color:inherit;} ul{list-style:none;} img{max-width:100%;display:block;}
+  .container{width:100%;max-width:1180px;margin:0 auto;padding:0 24px;}
+  a:focus-visible, button:focus-visible{outline:2px solid var(--gold-500);outline-offset:3px;border-radius:4px;}
+  @media (prefers-reduced-motion: reduce){*{animation:none !important; transition:none !important;}}
+
+  header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,0.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(11,37,69,0.06);}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;height:76px;}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;color:var(--navy-900);white-space:nowrap;}
+  .brand-mark{width:42px;height:42px;border-radius:10px;object-fit:contain;background:var(--white);padding:2px;flex-shrink:0;}
+  nav.main-nav{display:flex;align-items:center;gap:36px;}
+  nav.main-nav a{font-size:14.5px;font-weight:600;color:var(--slate-500);position:relative;padding:6px 2px;transition:color .18s ease;}
+  nav.main-nav a:hover{color:var(--navy-900);}
+  nav.main-nav a.active{color:var(--navy-900);}
+  nav.main-nav a.active::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:3px;border-radius:99px;background:var(--gold-500);}
+  .header-actions{display:flex;align-items:center;gap:18px;}
+  .menu-toggle{display:none;width:42px;height:42px;align-items:center;justify-content:center;border:1px solid rgba(11,37,69,0.12);border-radius:10px;color:var(--navy-900);}
+  .menu-toggle svg{width:22px;height:22px;}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:14px;padding:11px 22px;border-radius:var(--radius-full);white-space:nowrap;transition:transform .18s ease,box-shadow .18s ease,background .18s ease;}
+  .btn-primary{background:var(--navy-900);color:var(--white);box-shadow:0 8px 20px rgba(11,37,69,0.25);}
+  .btn-primary:hover{transform:translateY(-2px);background:var(--navy-800);}
+  @media (max-width:900px){nav.main-nav{display:none;position:absolute;top:calc(100% + 1px);left:0;right:0;padding:12px 24px 18px;background:var(--white);border-bottom:1px solid rgba(11,37,69,0.08);box-shadow:var(--shadow-md);} nav.main-nav.is-open{display:flex;flex-direction:column;align-items:stretch;gap:0;} nav.main-nav a{padding:13px 0;border-bottom:1px solid rgba(11,37,69,0.06);} nav.main-nav a:last-child{border-bottom:0;} nav.main-nav a.active::after{display:none;} .menu-toggle{display:inline-flex;}}
+  @media (max-width:560px){.header-inner{height:66px;} .brand span.brand-text{display:none;}}
+
+  .page-hero{position:relative;background-image:linear-gradient(90deg,rgba(18,59,82,.8),rgba(18,59,82,.42)),url('../image/background.webp');background-size:cover;background-position:center;overflow:hidden;padding:56px 0 64px;}
+  .page-hero::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);background-size:56px 56px;mask-image:radial-gradient(ellipse at 50% 0%, black 0%, transparent 72%);pointer-events:none;}
+  .page-hero .container{position:relative;}
+  .breadcrumb{color:var(--slate-300);font-size:13.5px;font-weight:600;margin-bottom:14px;}
+  .breadcrumb a{color:var(--slate-300);} .breadcrumb a:hover{color:var(--white);}
+  .page-hero h1{color:var(--white);font-size:clamp(28px,4vw,42px);font-weight:800;margin-bottom:12px;}
+  .page-hero p{color:var(--slate-300);font-size:15.5px;max-width:640px;line-height:1.7;}
+
+  .section{padding:56px 0;}
+  .section + .section{border-top:1px solid rgba(11,37,69,0.06);}
+  .section-eyebrow{color:var(--gold-600);font-weight:800;font-size:12.5px;letter-spacing:.08em;margin-bottom:8px;}
+  .section h2{font-size:26px;font-weight:800;color:var(--navy-900);margin-bottom:8px;}
+  .section .lead{color:var(--slate-500);font-size:15px;max-width:760px;margin-bottom:28px;line-height:1.7;}
+
+  .announce-card{display:flex;gap:18px;background:var(--bg-soft);border-radius:var(--radius-lg);padding:22px;border-left:4px solid var(--gold-500);margin-bottom:16px;}
+  .announce-date{flex-shrink:0;width:76px;text-align:center;background:var(--navy-900);color:var(--white);border-radius:var(--radius-md);padding:10px 4px;}
+  .announce-date .d{font-family:'Poppins',sans-serif;font-size:22px;font-weight:800;line-height:1;}
+  .announce-date .m{font-size:11px;font-weight:700;color:var(--gold-500);margin-top:2px;}
+  .announce-body h3{font-size:15.5px;color:var(--navy-900);margin-bottom:4px;}
+  .announce-body p{font-size:13.5px;color:var(--slate-500);line-height:1.6;}
+
+  .partner-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;}
+  .partner-card{background:var(--white);border:1px solid rgba(11,37,69,0.08);border-radius:var(--radius-md);padding:18px;box-shadow:var(--shadow-sm);}
+  .partner-card h3{font-size:14.5px;color:var(--navy-900);margin-bottom:6px;}
+  .partner-card h3 svg{width:1.15em;height:1.15em;vertical-align:-.2em;margin-right:4px;}
+  .partner-card p{font-size:13.5px;color:var(--slate-500);line-height:1.6;}
+  @media (max-width:700px){.partner-grid{grid-template-columns:1fr;}}
+
+  .chip-row{display:flex;flex-wrap:wrap;gap:10px;}
+  .chip{background:var(--bg-soft);border-radius:var(--radius-full);padding:8px 16px;font-size:13px;font-weight:600;color:var(--navy-900);border:1px solid rgba(11,37,69,0.08);}
+
+  .social-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .social-card{text-align:center;background:var(--bg-soft);border-radius:var(--radius-md);padding:24px 16px;}
+  .social-card .ic{font-size:26px;margin-bottom:8px;}
+  .social-card .ic svg{width:1em;height:1em;display:block;margin:auto;}
+  .social-card .name{font-weight:700;font-size:14px;color:var(--navy-900);}
+  .social-card .handle{font-size:12.5px;color:var(--slate-500);margin-top:2px;}
+  @media (max-width:700px){.social-grid{grid-template-columns:1fr;}}
+
+  footer{background:var(--navy-900);color:var(--slate-300);padding:48px 0 0;margin-top:20px;}
+  .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:40px;padding-bottom:48px;}
+  .footer-brand h3{color:var(--white);font-size:19px;font-weight:700;margin-bottom:14px;}
+  .footer-brand p{font-size:14.5px;line-height:1.75;max-width:280px;color:var(--slate-300);}
+  .footer-social{display:flex;gap:10px;margin-top:16px;}
+  .footer-social a{width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-size:15px;transition:background .18s ease;}
+  .footer-social a:hover{background:var(--gold-500);color:var(--navy-900);}
+  .footer-social svg{width:1.1em;height:1.1em;display:block;}
+  .footer-col h4{font-family:'Poppins',sans-serif;color:var(--gold-500);font-size:12.5px;font-weight:700;letter-spacing:.09em;margin-bottom:18px;}
+  .footer-col ul{display:flex;flex-direction:column;gap:12px;list-style:none;padding:0;}
+  .footer-col a{font-size:14.5px;color:var(--slate-300);transition:color .18s ease,padding-left .18s ease;}
+  .footer-col a:hover{color:var(--white);padding-left:4px;}
+  @media (max-width:900px){.footer-grid{grid-template-columns:1fr 1fr;gap:32px;}}
+  @media (max-width:560px){.footer-grid{grid-template-columns:1fr;} .footer-brand p{max-width:100%;}}
+  .ai-float{position:fixed;right:24px;bottom:24px;z-index:100;width:58px;height:58px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--navy-900);color:var(--white);box-shadow:0 8px 22px rgba(0,0,0,.22);transition:transform .2s ease,box-shadow .2s ease;overflow:hidden;}
+  .ai-float:hover{transform:translateY(-3px) scale(1.04);box-shadow:0 12px 28px rgba(0,0,0,.28);}
+  .ai-float:focus-visible{outline:3px solid var(--gold-500);outline-offset:4px;}
+  .ai-float img{width:34px;height:34px;object-fit:contain;border-radius:50%;}
+  @media (max-width:560px){.ai-float{right:16px;bottom:16px;width:52px;height:52px;}.ai-float img{width:30px;height:30px;}}
+  .footer-bottom{border-top:1px solid rgba(255,255,255,0.12);padding:22px 0;text-align:center;font-size:13px;margin-top:32px;}
+  body{font-family:'DM Sans',sans-serif;}
+  h1,h2,h3,.brand,nav a,.btn{font-family:'DM Sans',sans-serif;}
+  .page-hero h1{font-family:'DM Serif Display',serif;font-weight:400;}
+  .page-hero{background-image:linear-gradient(90deg,rgba(18,59,82,.8),rgba(18,59,82,.42)),url('../image/background.webp');background-size:cover;background-position:center;}
+  .page-hero::before{background-image:linear-gradient(135deg,rgba(255,255,255,.06) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.06) 50%,rgba(255,255,255,.06) 75%,transparent 75%);background-size:96px 96px;opacity:.35;}
+  .section h2{font-weight:700;}
+
+  html,body{overflow-x:hidden;}
+  html{scrollbar-width:none;-ms-overflow-style:none;}
+  html::-webkit-scrollbar{display:none;width:0;height:0;}
+  @media (max-width:900px){.header-inner{gap:10px;} .brand{min-width:0;} .header-actions{flex-shrink:0;} nav.main-nav{width:100%;}}
+  @media (max-width:560px){
+    .container{padding-left:16px;padding-right:16px;}
+    .brand span.brand-text{display:block;white-space:normal;font-size:clamp(11px,3.2vw,15px);line-height:1.1;}
+    .header-actions{gap:8px;}
+    .header-actions .btn{padding:10px 12px;font-size:12px;}
+    .page-hero{padding:44px 0 52px;}
+    .section{padding:42px 0;}
+    .section h2{font-size:23px;}
+    .social-grid{grid-template-columns:1fr;}
+    .footer-grid{grid-template-columns:1fr;gap:28px;}
+  }
+  @media (max-width:360px){.header-actions .btn{display:none;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container header-inner">
+    <a href="../index.html" class="brand">
+      <img class="brand-mark" src="../image/images.webp" alt="Logo SMP Negeri 2 Cibungbulang">
+      <span class="brand-text">SMPN 2 Cibungbulang</span>
+    </a>
+    <nav id="main-navigation" class="main-nav" aria-label="Navigasi utama">
+      <a href="../index.html">Beranda</a>
+      <a href="./profile.html">Profil</a>
+      <a href="./akademik.html">Akademik</a>
+      <a href="./kesiswaan.html">Kesiswaan</a>
+      <a href="./informasi.html" class="active">Informasi</a>
+      <a href="./kontak.html">Kontak</a>
+    </nav>
+    <div class="header-actions">
+      <button class="menu-toggle" type="button" aria-label="Buka menu navigasi" aria-expanded="false" aria-controls="main-navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16"></path><path d="M4 12h16"></path><path d="M4 18h16"></path></svg></button>
+      <a href="./ppdb.html" class="btn btn-primary">PPDB Online</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="page-hero">
+    <div class="container">
+      <div class="breadcrumb"><a href="../index.html">Beranda</a> / Informasi</div>
+      <h1>Informasi &amp; Humas</h1>
+      <p>Pengumuman terbaru, kerja sama sekolah, dan kanal media sosial resmi SMP Negeri 2 Cibungbulang.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-eyebrow">PENGUMUMAN</div>
+      <h2>Agenda &amp; Pengumuman Terbaru</h2>
+      <div class="announce-card">
+        <div class="announce-date"><div class="d">15</div><div class="m">JUN</div></div>
+        <div class="announce-body">
+          <h3>Sosialisasi SPMB Tahun Pelajaran 2026/2027</h3>
+          <p>Undangan kepada Kepala SDN/Swasta/MI se-wilayah untuk menugaskan 1 operator hadir dalam sosialisasi Sistem Penerimaan Murid Baru (SPMB), pukul 09.00 WIB di SMP Negeri 2 Cibungbulang.</p>
+        </div>
+      </div>
+      <div class="announce-card">
+        <div class="announce-date"><div class="d">Agu</div><div class="m">2026</div></div>
+        <div class="announce-body">
+          <h3>Cek Kesehatan Gratis (CKG) bersama Puskesmas</h3>
+          <p>Kegiatan pemeriksaan kesehatan gratis bekerja sama dengan Puskesmas setempat, dilaksanakan dua kali setahun di awal tahun ajaran (Agustus) dan semester 2 (Maret).</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-eyebrow">KERJA SAMA SEKOLAH</div>
+      <h2>Mitra &amp; Kemitraan</h2>
+      <div class="partner-grid">
+        <div class="partner-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"></path><path d="M6 20V6h12v14"></path><path d="M9 10h6M12 7v6"></path></svg>Puskesmas — Cek Kesehatan Gratis</h3>
+          <p>Kerja sama pemeriksaan kesehatan siswa dua kali setahun (Agustus &amp; Maret).</p>
+        </div>
+        <div class="partner-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 7 3v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6l7-3Z"></path><path d="m9 12 2 2 4-4"></path></svg>Kepolisian — Pembinaan Siswa</h3>
+          <p>Pembina upacara di awal tahun ajaran serta edukasi bahaya narkoba dan tawuran.</p>
+        </div>
+        <div class="partner-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9.5 12 5l10 4.5-10 4.5L2 9.5Z"></path><path d="M6 11.7V16c0 1.4 2.7 2.8 6 2.8s6-1.4 6-2.8v-4.3"></path></svg>Sekolah Lanjutan — Penyaluran Lulusan</h3>
+          <p>Kerja sama dengan SMA/SMK swasta dan kejuruan di sekitar Bogor untuk penyaluran lulusan, dilaksanakan setiap Februari–Maret.</p>
+        </div>
+        <div class="partner-card">
+          <h3><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V7l8-4 8 4v13"></path><path d="M8 20v-5h8v5M8 10h.01M12 10h.01M16 10h.01"></path></svg>PGRI Ranting 9</h3>
+          <p>Seluruh guru tergabung dalam organisasi PGRI dan aktif mengikuti kegiatan MGMP sesuai mata pelajaran masing-masing.</p>
+        </div>
+      </div>
+      <p class="lead" style="margin-top:20px;margin-bottom:0;">Sekolah mitra penyaluran lulusan antara lain:</p>
+      <div class="chip-row" style="margin-top:12px;">
+        <span class="chip">SMK Pelita Ciampea</span>
+        <span class="chip">SMA/SMK Bumi Sejahtera</span>
+        <span class="chip">SMA Kornita</span>
+        <span class="chip">SMK Infokom</span>
+        <span class="chip">SMK Komputer Indonesia</span>
+        <span class="chip">SMK Pandu 1 &amp; 2</span>
+        <span class="chip">SMK Golden</span>
+        <span class="chip">SMK Boash 1 &amp; 2</span>
+        <span class="chip">SMK Kehutanan Bakti Rimba</span>
+        <span class="chip">SMK Geoinformatika</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-eyebrow">PROGRAM PEMERINTAH</div>
+      <h2>Program Indonesia Pintar (PIP)</h2>
+      <p class="lead">Sekolah memfasilitasi pengajuan Program Indonesia Pintar bagi peserta didik yang berhak menerima bantuan pendidikan sesuai ketentuan pemerintah. Informasi kelayakan dan status pengajuan dapat ditanyakan langsung ke bagian Tata Usaha sekolah.</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="section-eyebrow">MEDIA SOSIAL</div>
+      <h2>Ikuti Kanal Resmi Kami</h2>
+      <div class="social-grid">
+        <div class="social-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="12" cy="12" r="3.5"></circle><circle cx="17.5" cy="6.5" r=".5" fill="currentColor"></circle></svg></div><div class="name">Instagram</div><div class="handle">smpn2cibungbulang</div></div>
+        <div class="social-card"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5h1.7V4a22 22 0 0 0-2.5-.2c-2.5 0-4.2 1.5-4.2 4.2V10H7.5v3h2.6v8h3.4Z"></path></svg></div><div class="name">Facebook</div><div class="handle">SMPN 2 Cibungbulang</div></div>
+        <div class="social-card"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4v10.5a3.5 3.5 0 1 1-3-3.46"></path><path d="M14 4c1 2 2.4 3 5 3"></path></svg></div><div class="name">TikTok</div><div class="handle">smpn2cibungbulang</div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid"><div class="footer-brand"><h3>SMPN 2 Cibungbulang</h3><p>Membangun generasi cerdas, berakhlak mulia, dan berwawasan lingkungan.</p><div class="footer-social"><a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="12" cy="12" r="3.5"></circle></svg></a><a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5h1.7V4a22 22 0 0 0-2.5-.2c-2.5 0-4.2 1.5-4.2 4.2V10H7.5v3h2.6v8h3.4Z"></path></svg></a><a href="#" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14 4v10.5a3.5 3.5 0 1 1-3-3.46M14 4c1 2 2.4 3 5 3"></path></svg></a></div></div><div class="footer-col"><h4>MENU</h4><ul><li><a href="./profile.html">Profil</a></li><li><a href="./akademik.html">Akademik</a></li><li><a href="./kesiswaan.html">Kesiswaan</a></li></ul></div><div class="footer-col"><h4>INFORMASI</h4><ul><li><a href="./informasi.html">Berita &amp; Pengumuman</a></li><li><a href="./ppdb.html">PPDB / SPMB</a></li><li><a href="./kontak.html">Kontak</a></li></ul></div><div class="footer-col"><h4>KONTAK</h4><ul><li>(0251) 8647771</li><li>smpn_2cibungbulang@yahoo.co.id</li><li>Jl. Desa Girimulya RT.02/RW.01</li></ul></div></div>
+    <div class="footer-bottom">&copy; 2026 SMP Negeri 2 Cibungbulang. All Rights Reserved.</div>
+  </div>
+</footer>
+
+<a class="ai-float" href="../../mentor-web/index.html" target="_blank" rel="noopener" aria-label="Buka AI Asisten"><img src="../image/logoaksaraku.png" alt="Logo Aksaraku"></a>
+<script>
+  const socialUrls = { Instagram: 'https://www.instagram.com/smpnduacibungbulang?igsi=NXZva2dyZnQ5dXEx', Facebook: 'https://www.facebook.com/share/1bb8trP3XX/?mibextid=wwXIfr', TikTok: 'https://www.tiktok.com/@smpnduacibungbulang?_r=1&_t=ZS-99Re0dvhYPP' };
+  document.querySelectorAll('.footer-social a').forEach(link => { link.href = socialUrls[link.getAttribute('aria-label')]; link.target = '_blank'; link.rel = 'noopener'; });
+  const menuToggle = document.querySelector('.menu-toggle');
+  const mainNavigation = document.querySelector('#main-navigation');
+  menuToggle.addEventListener('click', () => {
+    const isOpen = mainNavigation.classList.toggle('is-open');
+    menuToggle.setAttribute('aria-expanded', String(isOpen));
+    menuToggle.setAttribute('aria-label', isOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi');
+  });
+  mainNavigation.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+    mainNavigation.classList.remove('is-open');
+    menuToggle.setAttribute('aria-expanded', 'false');
+    menuToggle.setAttribute('aria-label', 'Buka menu navigasi');
+  }));
+</script>
+</body>
+</html>

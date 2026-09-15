@@ -1,0 +1,1867 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMP Negeri 2 Cibungbulang</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display:ital@0;1&display=swap"
+    rel="stylesheet">
+  <link rel="icon" type="image/webp" href="./image/images.webp">
+  <style>
+    :root {
+      --navy-900: #0B2545;
+      --navy-800: #0F3166;
+      --blue-600: #1B4F91;
+      --blue-500: #2563AC;
+      --gold-500: #F5B301;
+      --gold-600: #DE9F00;
+      --teal-500: #14919B;
+      --ink: #0B2545;
+      --slate-500: #5B6B82;
+      --slate-300: #B9C4D6;
+      --bg-soft: #F5F8FC;
+      --white: #FFFFFF;
+      --shadow-sm: 0 2px 10px rgba(11, 37, 69, 0.06);
+      --shadow-md: 0 12px 32px rgba(11, 37, 69, 0.10);
+      --radius-lg: 20px;
+      --radius-md: 14px;
+      --radius-full: 999px;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+      background: var(--white);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1,
+    h2,
+    h3,
+    .brand,
+    nav a,
+    .btn {
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    ul {
+      list-style: none;
+    }
+
+    button {
+      font: inherit;
+      cursor: pointer;
+      border: none;
+      background: none;
+    }
+
+    img {
+      max-width: 100%;
+      display: block;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    a:focus-visible,
+    button:focus-visible {
+      outline: 2px solid var(--gold-500);
+      outline-offset: 3px;
+      border-radius: 4px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(11, 37, 69, 0.06);
+    }
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 76px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      font-size: 17px;
+      color: var(--navy-900);
+      white-space: nowrap;
+    }
+
+    .brand-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      object-fit: contain;
+      background: var(--white);
+      padding: 2px;
+      flex-shrink: 0;
+    }
+
+    nav.main-nav {
+      display: flex;
+      align-items: center;
+      gap: 36px;
+    }
+
+    nav.main-nav a {
+      font-size: 14.5px;
+      font-weight: 600;
+      color: var(--slate-500);
+      position: relative;
+      padding: 6px 2px;
+      transition: color .18s ease;
+    }
+
+    nav.main-nav a:hover {
+      color: var(--navy-900);
+    }
+
+    nav.main-nav a.active {
+      color: var(--navy-900);
+    }
+
+    nav.main-nav a.active::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -4px;
+      height: 3px;
+      border-radius: 99px;
+      background: var(--gold-500);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .menu-toggle {
+      display: none;
+      width: 42px;
+      height: 42px;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid rgba(11, 37, 69, 0.12);
+      border-radius: 10px;
+      color: var(--navy-900);
+    }
+
+    .menu-toggle svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      padding: 11px 22px;
+      border-radius: var(--radius-full);
+      white-space: nowrap;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+
+    .btn-primary {
+      background: var(--navy-900);
+      color: var(--white);
+      box-shadow: 0 8px 20px rgba(11, 37, 69, 0.25);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      background: var(--navy-800);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--white);
+      border: 1.5px solid rgba(255, 255, 255, 0.55);
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: #fff;
+    }
+
+    .btn-gold {
+      background: var(--gold-500);
+      color: var(--navy-900);
+      box-shadow: 0 8px 20px rgba(245, 179, 1, 0.3);
+    }
+
+    .btn-gold:hover {
+      transform: translateY(-2px);
+      background: var(--gold-600);
+    }
+
+    @media (max-width:900px) {
+      nav.main-nav {
+        display: none;
+        position: absolute;
+        top: calc(100% + 1px);
+        left: 0;
+        right: 0;
+        padding: 12px 24px 18px;
+        background: var(--white);
+        border-bottom: 1px solid rgba(11, 37, 69, 0.08);
+        box-shadow: var(--shadow-md);
+      }
+
+      nav.main-nav.is-open {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0;
+      }
+
+      nav.main-nav a {
+        padding: 13px 0;
+        border-bottom: 1px solid rgba(11, 37, 69, 0.06);
+      }
+
+      nav.main-nav a:last-child {
+        border-bottom: 0;
+      }
+
+      nav.main-nav a.active::after {
+        display: none;
+      }
+
+      .menu-toggle {
+        display: inline-flex;
+      }
+    }
+
+    @media (max-width:560px) {
+      .header-inner {
+        height: 66px;
+      }
+
+      .brand span.brand-text {
+        display: none;
+      }
+    }
+
+    /* Mobile layout safeguards */
+    html, body {
+      overflow-x: hidden;
+    }
+
+    html {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    html::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+
+    @media (max-width: 900px) {
+      .header-inner {
+        gap: 10px;
+      }
+
+      .brand {
+        min-width: 0;
+      }
+
+      .header-actions {
+        flex-shrink: 0;
+      }
+
+      nav.main-nav {
+        width: 100%;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .container {
+        padding-left: 16px;
+        padding-right: 16px;
+      }
+
+      .brand span.brand-text {
+        display: block;
+        white-space: normal;
+        font-size: clamp(11px, 3.2vw, 15px);
+        line-height: 1.1;
+      }
+
+      .header-actions {
+        gap: 8px;
+      }
+
+      .header-actions .btn {
+        padding: 10px 12px;
+        font-size: 12px;
+      }
+
+      .hero {
+        padding-top: 48px;
+        padding-bottom: 72px;
+      }
+
+      .hero h1 {
+        font-size: clamp(34px, 11vw, 48px);
+      }
+
+      .stats-grid,
+      .feature-grid,
+      .news-grid,
+      .quick-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section {
+        padding-top: 42px;
+        padding-bottom: 42px;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 28px;
+      }
+    }
+
+    @media (max-width: 360px) {
+      .header-actions .btn {
+        display: none;
+      }
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      position: relative;
+      background: #123b52;
+      overflow: hidden;
+      padding: 92px 0 116px;
+    }
+
+    .hero::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(135deg, rgba(255, 255, 255, .06) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .06) 50%, rgba(255, 255, 255, .06) 75%, transparent 75%);
+      background-size: 96px 96px;
+      opacity: .22;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(90deg, rgba(18, 59, 82, .82) 0%, rgba(18, 59, 82, .72) 28%, rgba(18, 59, 82, .48) 50%, rgba(18, 59, 82, .12) 78%, rgba(18, 59, 82, .04) 100%), url('./image/background.webp');
+      background-size: cover;
+      background-position: center right;
+      opacity: .72;
+      pointer-events: none;
+    }
+
+    .hero-inner {
+      position: relative;
+      max-width: 1180px;
+      margin: 0 auto;
+      text-align: left;
+      display: block;
+    }
+
+    .hero-copy {
+      position: relative;
+      z-index: 2;
+      max-width: 680px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--gold-500);
+      font-weight: 800;
+      font-size: 12.5px;
+      letter-spacing: 0.08em;
+      padding-left: 14px;
+      border-left: 3px solid var(--gold-500);
+      margin-bottom: 26px;
+    }
+
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      color: var(--white);
+      font-size: clamp(38px, 6vw, 68px);
+      font-weight: 400;
+      line-height: 1.05;
+      letter-spacing: 0;
+      margin-bottom: 20px;
+      max-width: 760px;
+    }
+
+    .hero p {
+      color: var(--slate-300);
+      font-size: 16.5px;
+      line-height: 1.7;
+      max-width: 600px;
+      margin-bottom: 38px;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+
+    .hero .btn-primary {
+      background: var(--white);
+      color: var(--navy-900);
+      box-shadow: 0 10px 26px rgba(0, 0, 0, 0.25);
+    }
+
+    .hero .btn-primary:hover {
+      background: #EFF3F9;
+    }
+
+    @media (max-width:560px) {
+      .hero {
+        padding: 56px 0 84px;
+      }
+
+      .hero::after {
+        background-position: 62% center;
+        opacity: .5;
+      }
+
+      .hero p {
+        font-size: 15px;
+      }
+
+      .hero-ctas {
+        flex-direction: column;
+        width: 100%;
+      }
+
+      .hero-ctas .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* ===== STATS ===== */
+    .stats-section {
+      background: var(--white);
+      padding: 0 0 90px;
+    }
+
+    .stats-wrap {
+      margin-top: -64px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 22px;
+    }
+
+    .stat-card {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 30px 22px;
+      box-shadow: 0 8px 24px rgba(11, 37, 69, 0.08);
+      border: 1px solid rgba(11, 37, 69, 0.08);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: transform .22s ease, box-shadow .22s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 14px 30px rgba(11, 37, 69, 0.12);
+    }
+
+    .stat-icon {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 18px;
+    }
+
+    .stat-icon.navy {
+      background: rgba(11, 37, 69, 0.08);
+      color: var(--navy-900);
+    }
+
+    .stat-icon.gold {
+      background: rgba(245, 179, 1, 0.15);
+      color: var(--gold-600);
+    }
+
+    .stat-icon.teal {
+      background: rgba(20, 145, 155, 0.12);
+      color: var(--teal-500);
+    }
+
+    .stat-number {
+      font-family: 'Poppins', sans-serif;
+      font-size: 34px;
+      font-weight: 800;
+      color: var(--navy-900);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--slate-500);
+      letter-spacing: 0.02em;
+    }
+
+    @media (max-width:900px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width:560px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+
+      .stats-wrap {
+        margin-top: -40px;
+      }
+    }
+
+    /* ===== GENERIC SECTION ===== */
+    .section {
+      padding: 76px 0;
+    }
+
+    .section.soft {
+      background: var(--bg-soft);
+    }
+
+    .section-head {
+      max-width: 640px;
+      margin-bottom: 44px;
+    }
+
+    .section-eyebrow {
+      display: inline-block;
+      color: var(--gold-600);
+      font-weight: 800;
+      font-size: 12.5px;
+      letter-spacing: .08em;
+      margin-bottom: 10px;
+    }
+
+    .section-head h2 {
+      font-size: clamp(24px, 3vw, 32px);
+      font-weight: 800;
+      color: var(--navy-900);
+      margin-bottom: 10px;
+    }
+
+    .section-head p {
+      color: var(--slate-500);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .section-head.center {
+      margin-left: auto;
+      margin-right: auto;
+      text-align: center;
+    }
+
+    .section-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 24px;
+      margin-bottom: 44px;
+    }
+
+    .link-arrow {
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--blue-600);
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .link-arrow:hover {
+      color: var(--navy-900);
+    }
+
+    @media (max-width:700px) {
+      .section-top-row {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    /* ===== ABOUT ===== */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 56px;
+      align-items: center;
+    }
+
+    .about-visual {
+      position: relative;
+      background-image: linear-gradient(90deg, rgba(11, 37, 69, .88), rgba(11, 37, 69, .62)), url('./image/visimisi.webp');
+      background-size: cover;
+      background-position: center;
+      border-radius: 10px;
+      padding: 44px 36px;
+      color: var(--white);
+      box-shadow: 0 16px 34px rgba(11, 37, 69, 0.16);
+      overflow: hidden;
+    }
+
+    .about-visual .quote {
+      font-size: 19px;
+      font-weight: 700;
+      line-height: 1.55;
+      font-style: italic;
+      margin-bottom: 18px;
+    }
+
+    .about-visual .signee {
+      font-size: 13px;
+      color: var(--slate-300);
+      font-weight: 600;
+    }
+
+    .about-visual::before {
+      content: "”";
+      position: absolute;
+      top: 12px;
+      right: 24px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 90px;
+      color: rgba(245, 179, 1, 0.25);
+      line-height: 1;
+    }
+
+    .about-text p {
+      color: var(--slate-500);
+      font-size: 15px;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    .mini-fact-row {
+      display: flex;
+      gap: 28px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .mini-fact .num {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 800;
+      font-size: 24px;
+      color: var(--navy-900);
+    }
+
+    .mini-fact .lbl {
+      font-size: 12.5px;
+      color: var(--slate-500);
+      font-weight: 600;
+    }
+
+    @media (max-width:900px) {
+      .about-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== FEATURES ===== */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .feature-card {
+      background: var(--white);
+      border: 1px solid rgba(11, 37, 69, 0.07);
+      border-radius: var(--radius-lg);
+      padding: 26px 22px;
+      box-shadow: var(--shadow-sm);
+      transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .feature-card .ic {
+      font-size: 26px;
+      margin-bottom: 14px;
+    }
+
+    .ic svg {
+      width: 1em;
+      height: 1em;
+      display: block;
+    }
+
+    .feature-card h3 {
+      font-size: 15px;
+      color: var(--navy-900);
+      margin-bottom: 8px;
+    }
+
+    .feature-card p {
+      font-size: 13px;
+      color: var(--slate-500);
+      line-height: 1.65;
+    }
+
+    @media (max-width:900px) {
+      .feature-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width:560px) {
+      .feature-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== EXTRACURRICULAR STRIP ===== */
+    .ekskul-carousel {
+      position: relative;
+    }
+
+    .ekskul-strip {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 4px 2px 12px;
+      scrollbar-width: none;
+      scroll-behavior: smooth;
+      overscroll-behavior-x: contain;
+    }
+
+    .ekskul-strip::-webkit-scrollbar {
+      display: none;
+    }
+
+    .ekskul-chip {
+      flex: 0 0 calc((100% - 42px) / 4);
+      background: var(--white);
+      border: 1px solid rgba(11, 37, 69, 0.08);
+      border-radius: 10px;
+      padding: 18px 22px;
+      min-width: 150px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .carousel-control {
+      position: absolute;
+      top: 50%;
+      z-index: 2;
+      width: 38px;
+      height: 38px;
+      margin-top: -25px;
+      border: 1px solid rgba(11, 37, 69, .12);
+      border-radius: 50%;
+      background: var(--white);
+      color: var(--navy-900);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 5px 14px rgba(11, 37, 69, .12);
+      transition: background .18s ease, color .18s ease, transform .18s ease;
+    }
+
+    .carousel-control:hover {
+      background: var(--navy-900);
+      color: var(--white);
+      transform: scale(1.05);
+    }
+
+    .carousel-control svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    .carousel-control.prev {
+      left: -18px;
+    }
+
+    .carousel-control.next {
+      right: -18px;
+    }
+
+    @media (max-width:900px) {
+      .ekskul-chip {
+        flex-basis: calc((100% - 14px) / 2);
+      }
+
+      .carousel-control.prev {
+        left: -8px;
+      }
+
+      .carousel-control.next {
+        right: -8px;
+      }
+    }
+
+    @media (max-width:560px) {
+      .ekskul-chip {
+        flex-basis: 100%;
+      }
+
+      .carousel-control {
+        width: 34px;
+        height: 34px;
+      }
+
+      .carousel-control.prev {
+        left: 4px;
+      }
+
+      .carousel-control.next {
+        right: 4px;
+      }
+    }
+
+    .ekskul-chip .ic {
+      font-size: 24px;
+      margin-bottom: 8px;
+    }
+
+    .ekskul-chip .nm {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--navy-900);
+    }
+
+    .ekskul-chip .tg {
+      font-size: 11px;
+      color: var(--gold-600);
+      font-weight: 700;
+      margin-top: 4px;
+    }
+
+    /* ===== ACHIEVEMENTS ===== */
+    .achieve-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+    }
+
+    .achieve-card {
+      background: var(--white);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      border-top: 4px solid var(--gold-500);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .achieve-card .tier {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 800;
+      color: var(--gold-600);
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+
+    .achieve-card .title {
+      font-weight: 700;
+      font-size: 14.5px;
+      color: var(--navy-900);
+      margin-bottom: 6px;
+      line-height: 1.4;
+    }
+
+    .achieve-card .meta {
+      font-size: 12px;
+      color: var(--slate-500);
+    }
+
+    @media (max-width:900px) {
+      .achieve-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width:560px) {
+      .achieve-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== NEWS ===== */
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .news-card {
+      background: var(--white);
+      border: 1px solid rgba(11, 37, 69, 0.08);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .news-top {
+      background: var(--navy-900);
+      padding: 22px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .news-date {
+      width: 56px;
+      height: 56px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+
+    .news-date .d {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 800;
+      font-size: 19px;
+      line-height: 1;
+    }
+
+    .news-date .m {
+      font-size: 10px;
+      color: var(--gold-500);
+      font-weight: 700;
+    }
+
+    .news-top .tag {
+      color: var(--slate-300);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .news-body {
+      padding: 20px 22px;
+    }
+
+    .news-body h3 {
+      font-size: 15px;
+      color: var(--navy-900);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .news-body p {
+      font-size: 13px;
+      color: var(--slate-500);
+      line-height: 1.65;
+    }
+
+    /* ===== PPDB BANNER ===== */
+    .ppdb-banner {
+      position: relative;
+      background: linear-gradient(120deg, var(--navy-900), var(--blue-600));
+      border-radius: var(--radius-lg);
+      padding: 52px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 32px;
+      overflow: hidden;
+    }
+
+    .ppdb-banner::after {
+      content: "";
+      position: absolute;
+      right: -60px;
+      top: -60px;
+      width: 220px;
+      height: 220px;
+      background: rgba(245, 179, 1, 0.18);
+      border-radius: 50%;
+    }
+
+    .ppdb-text {
+      position: relative;
+    }
+
+    .ppdb-text .tag {
+      color: var(--gold-500);
+      font-weight: 800;
+      font-size: 12.5px;
+      letter-spacing: .08em;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .ppdb-text h2 {
+      color: var(--white);
+      font-size: clamp(22px, 3vw, 30px);
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .ppdb-text p {
+      color: var(--slate-300);
+      font-size: 14.5px;
+      max-width: 460px;
+      line-height: 1.7;
+    }
+
+    .ppdb-cta {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    @media (max-width:800px) {
+      .ppdb-banner {
+        flex-direction: column;
+        text-align: center;
+        padding: 40px 26px;
+      }
+
+      .ppdb-text p {
+        max-width: 100%;
+      }
+    }
+
+    /* ===== CONTACT MINI ===== */
+    .contact-mini {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    .cm-card {
+      background: var(--white);
+      border: 1px solid rgba(11, 37, 69, 0.08);
+      border-radius: var(--radius-md);
+      padding: 22px;
+      text-align: center;
+    }
+
+    .cm-card .ic {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: var(--bg-soft);
+      color: var(--navy-900);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
+      margin: 0 auto 12px;
+    }
+
+    .cm-card h3 {
+      font-size: 13.5px;
+      color: var(--navy-900);
+      margin-bottom: 4px;
+    }
+
+    .cm-card p {
+      font-size: 13px;
+      color: var(--slate-500);
+      line-height: 1.6;
+    }
+
+    @media (max-width:700px) {
+      .contact-mini {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: var(--navy-900);
+      color: var(--slate-300);
+      padding: 64px 0 0;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr 1fr 1fr;
+      gap: 40px;
+      padding-bottom: 48px;
+    }
+
+    .footer-brand h3 {
+      color: var(--white);
+      font-size: 19px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .footer-brand p {
+      font-size: 14.5px;
+      line-height: 1.75;
+      max-width: 280px;
+      color: var(--slate-300);
+    }
+
+    .footer-social {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .footer-social a {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      transition: background .18s ease;
+    }
+
+    .footer-social svg {
+      width: 1.1em;
+      height: 1.1em;
+      display: block;
+    }
+
+    .footer-social a:hover {
+      background: var(--gold-500);
+      color: var(--navy-900);
+    }
+
+    .footer-col h4 {
+      font-family: 'Poppins', sans-serif;
+      color: var(--gold-500);
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: 0.09em;
+      margin-bottom: 18px;
+    }
+
+    .footer-col ul {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .footer-col a {
+      font-size: 14.5px;
+      color: var(--slate-300);
+      transition: color .18s ease, padding-left .18s ease;
+    }
+
+    .footer-col a:hover {
+      color: var(--white);
+      padding-left: 4px;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+      padding: 22px 0;
+      text-align: center;
+      font-size: 13px;
+      color: var(--slate-300);
+    }
+
+    @media (max-width:900px) {
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 32px;
+      }
+    }
+
+    @media (max-width:560px) {
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-brand p {
+        max-width: 100%;
+      }
+    }
+
+    .ai-float {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      z-index: 100;
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--navy-900);
+      color: var(--white);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, .22);
+      transition: transform .2s ease, box-shadow .2s ease;
+      overflow: hidden;
+    }
+
+    .ai-float:hover {
+      transform: translateY(-3px) scale(1.04);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+    }
+
+    .ai-float:focus-visible {
+      outline: 3px solid var(--gold-500);
+      outline-offset: 4px;
+    }
+
+    .ai-float img {
+      width: 34px;
+      height: 34px;
+      object-fit: contain;
+      border-radius: 50%;
+    }
+
+    @media (max-width:560px) {
+      .ai-float {
+        right: 16px;
+        bottom: 16px;
+        width: 52px;
+        height: 52px;
+      }
+
+      .ai-float img {
+        width: 30px;
+        height: 30px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="container header-inner">
+      <a href="./index.html" class="brand">
+        <img class="brand-mark" src="./image/images.webp" alt="Logo SMP Negeri 2 Cibungbulang">
+        <span class="brand-text">SMPN 2 Cibungbulang</span>
+      </a>
+
+      <nav id="main-navigation" class="main-nav" aria-label="Navigasi utama">
+        <a href="./index.html" class="active">Beranda</a>
+        <a href="./pages/profile.html">Profil</a>
+        <a href="./pages/akademik.html">Akademik</a>
+        <a href="./pages/kesiswaan.html">Kesiswaan</a>
+        <a href="./pages/informasi.html">Informasi</a>
+        <a href="./pages/kontak.html">Kontak</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="menu-toggle" type="button" aria-label="Buka menu navigasi" aria-expanded="false"
+          aria-controls="main-navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round">
+            <path d="M4 6h16"></path>
+            <path d="M4 12h16"></path>
+            <path d="M4 18h16"></path>
+          </svg></button>
+        <a href="./pages/ppdb.html" class="btn btn-primary">PPDB Online</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container hero-inner">
+        <div class="hero-copy">
+          <span class="eyebrow">SEKOLAH MENENGAH PERTAMA NEGERI</span>
+          <h1>SMP NEGERI 2 CIBUNGBULANG</h1>
+          <p>Membangun Generasi Berkarakter, Berprestasi, dan Siap Menghadapi Masa Depan melalui pendidikan berkualitas
+            dan lingkungan yang inklusif.</p>
+          <div class="hero-ctas">
+            <a href="./pages/profile.html" class="btn btn-primary">Jelajahi Profil</a>
+            <a href="./pages/ppdb.html" class="btn btn-outline">Informasi PPDB</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- STATS -->
+    <section class="stats-section">
+      <div class="container stats-wrap">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon navy" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4.5" width="18" height="16" rx="2.5"></rect>
+                <line x1="3" y1="9.5" x2="21" y2="9.5"></line>
+                <line x1="7.5" y1="2.5" x2="7.5" y2="6.5"></line>
+                <line x1="16.5" y1="2.5" x2="16.5" y2="6.5"></line>
+              </svg>
+            </div>
+            <div class="stat-number">1998</div>
+            <div class="stat-label">Tahun Berdiri</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon gold" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 2.5l2.24 4.54 5.02.73-3.63 3.54.86 5-4.49-2.36-4.49 2.36.86-5-3.63-3.54 5.02-.73L12 2.5z">
+                </path>
+                <path d="M8.5 15.5L7 21.5l5-2.7 5 2.7-1.5-6"></path>
+              </svg>
+            </div>
+            <div class="stat-number">A</div>
+            <div class="stat-label">Akreditasi</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon teal" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 20v-1.6a3.4 3.4 0 0 0-3.4-3.4H6.4A3.4 3.4 0 0 0 3 18.4V20"></path>
+                <circle cx="9.7" cy="7.4" r="3.4"></circle>
+                <path d="M16.2 4.3a3.4 3.4 0 0 1 0 6.5"></path>
+                <path d="M21 20v-1.6a3.4 3.4 0 0 0-2.5-3.28"></path>
+              </svg>
+            </div>
+            <div class="stat-number">1.171</div>
+            <div class="stat-label">Peserta Didik</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon navy" aria-hidden="true">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 9.5L12 5l10 4.5-10 4.5L2 9.5z"></path>
+                <path d="M6 11.7v4.3c0 1.4 2.7 2.8 6 2.8s6-1.4 6-2.8v-4.3"></path>
+                <path d="M20.5 9.5v6"></path>
+              </svg>
+            </div>
+            <div class="stat-number">51</div>
+            <div class="stat-label">Pendidik &amp; Tendik</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="section">
+      <div class="container about-grid">
+        <div class="about-text">
+          <span class="section-eyebrow">TENTANG KAMI</span>
+          <h2 style="font-size:28px;font-weight:800;color:var(--navy-900);margin-bottom:16px;">Sekolah yang Berkembang
+            Bersama Profil Pelajar Pancasila</h2>
+          <p>SMP Negeri 2 Cibungbulang berdiri sejak 1998 dan telah meraih akreditasi A. Kami berkomitmen membangun
+            karakter, prestasi akademik, prestasi non-akademik, dan kesadaran lingkungan pada setiap peserta didik.</p>
+          <p>Dengan 30 rombongan belajar dan 51 tenaga pendidik &amp; kependidikan, kami menghadirkan lingkungan belajar
+            yang kondusif, inklusif, aman, dan menyenangkan.</p>
+          <div class="mini-fact-row">
+            <div class="mini-fact">
+              <div class="num">100%</div>
+              <div class="lbl">Tingkat Kelulusan</div>
+            </div>
+            <div class="mini-fact">
+              <div class="num">96%</div>
+              <div class="lbl">Lanjut ke Jenjang Atas</div>
+            </div>
+            <div class="mini-fact">
+              <div class="num">13</div>
+              <div class="lbl">Ekstrakurikuler</div>
+            </div>
+          </div>
+          <div style="margin-top:28px;"><a href="./pages/profile.html" class="link-arrow">Lihat profil lengkap →</a>
+          </div>
+        </div>
+        <div class="about-visual">
+          <div class="quote">"Terwujudnya Sekolah yang Berkembang Profil Pelajar Pancasila, unggul dalam prestasi
+            Akademik dan Non Akademik, serta berwawasan lingkungan."</div>
+          <div class="signee">— Visi SMP Negeri 2 Cibungbulang</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="section soft">
+      <div class="container">
+        <div class="section-head center" style="margin-left:auto;margin-right:auto;">
+          <span class="section-eyebrow">KENAPA MEMILIH KAMI</span>
+          <h2>Program Unggulan Sekolah</h2>
+          <p>Kombinasi akademik, karakter, dan pembiasaan harian yang membentuk peserta didik secara utuh.</p>
+        </div>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 20h16"></path>
+                <path d="M6 20v-8h12v8"></path>
+                <path d="M8 12V9a4 4 0 0 1 8 0v3"></path>
+                <path d="M12 5v7"></path>
+              </svg></div>
+            <h3>Pembiasaan Harian</h3>
+            <p>Upacara, Sarapan Bergizi, Senam Ceria, hingga Dhuha &amp; Zikir Bersama setiap pekan.</p>
+          </div>
+          <div class="feature-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"></path>
+                <path d="M8 6H4v2a4 4 0 0 0 4 4"></path>
+                <path d="M16 6h4v2a4 4 0 0 1-4 4"></path>
+                <path d="M12 13v4"></path>
+                <path d="M8 20h8"></path>
+                <path d="M9 17h6"></path>
+              </svg></div>
+            <h3>Prestasi Terbukti</h3>
+            <p>Puluhan penghargaan tingkat kabupaten hingga nasional dari berbagai cabang lomba.</p>
+          </div>
+          <div class="feature-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9 3v6l-4.5 8.2A2 2 0 0 0 6.2 20h11.6a2 2 0 0 0 1.7-2.8L15 9V3"></path>
+                <path d="M8 3h8"></path>
+                <path d="M7 15h10"></path>
+              </svg></div>
+            <h3>Fasilitas Lengkap</h3>
+            <p>Laboratorium IPA, bahasa, komputer, multimedia, perpustakaan, dan musholla.</p>
+          </div>
+          <div class="feature-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m8 12 2 2a2 2 0 0 0 3 0l3-3"></path>
+                <path d="m3 9 3-3 5 5-3 3-5-5Z"></path>
+                <path d="m21 9-3-3-5 5 3 3 5-5Z"></path>
+              </svg></div>
+            <h3>Kemitraan Aktif</h3>
+            <p>Kerja sama dengan Puskesmas, Kepolisian, dan sekolah lanjutan untuk penyaluran lulusan.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EKSKUL -->
+    <section class="section">
+      <div class="container">
+        <div class="section-top-row">
+          <div class="section-head" style="margin-bottom:0;">
+            <span class="section-eyebrow">KESISWAAN</span>
+            <h2>Ekstrakurikuler Pilihan</h2>
+          </div>
+          <a href="./pages/kesiswaan.html" class="link-arrow">Lihat semua ekskul →</a>
+        </div>
+        <div class="ekskul-carousel">
+          <button class="carousel-control prev" type="button" aria-label="Ekstrakurikuler sebelumnya"><svg
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <path d="m15 18-6-6 6-6"></path>
+            </svg></button>
+          <div class="ekskul-strip" data-auto-scroll="true" tabindex="0" aria-label="Daftar ekstrakurikuler pilihan">
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 20h16"></path>
+                  <path d="M6 20V9l6-5 6 5v11"></path>
+                  <path d="M9 20v-5h6v5"></path>
+                </svg></div>
+              <div class="nm">Pramuka</div>
+              <div class="tg">WAJIB</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14"></path>
+                </svg></div>
+              <div class="nm">PMR</div>
+              <div class="tg">WAJIB</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M6 4h12v4H6z"></path>
+                  <path d="M8 8v12h8V8"></path>
+                  <path d="M10 12h4M10 16h4"></path>
+                </svg></div>
+              <div class="nm">Passus</div>
+              <div class="tg">WAJIB</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8"></circle>
+                  <path d="M12 8v8M9 11h6"></path>
+                </svg></div>
+              <div class="nm">Marching Band</div>
+              <div class="tg">PILIHAN</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="7" cy="17" r="3"></circle>
+                  <circle cx="17" cy="17" r="3"></circle>
+                  <path d="M7 17 10 9h4l3 8M10 9l-2-3M14 9l3-3"></path>
+                </svg></div>
+              <div class="nm">Futsal</div>
+              <div class="tg">PILIHAN</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="8"></circle>
+                  <path d="m12 4 2 5-2 3-2-3 2-5ZM4 12h5l3 3-4 2M20 12h-5l-3 3 4 2"></path>
+                </svg></div>
+              <div class="nm">Basket</div>
+              <div class="tg">PILIHAN</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="5" r="2"></circle>
+                  <path d="m12 7-3 5 3 2 3-2-3-5ZM9 12l-3 7M15 12l3 7M9 20l3-6 3 6"></path>
+                </svg></div>
+              <div class="nm">Seni Tari</div>
+              <div class="tg">PILIHAN</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M5 18h14M7 18V9a5 5 0 0 1 10 0v9"></path>
+                  <path d="M9 5h6"></path>
+                </svg></div>
+              <div class="nm">English Club</div>
+              <div class="tg">PILIHAN</div>
+            </div>
+            <div class="ekskul-chip">
+              <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 21V9"></path>
+                  <path d="M12 13c-4 0-6-2-6-5 4 0 6 2 6 5ZM12 10c0-3 2-5 6-5 0 3-2 5-6 5Z"></path>
+                  <path d="M5 21h14"></path>
+                </svg></div>
+              <div class="nm">PLH</div>
+              <div class="tg">PILIHAN</div>
+            </div>
+          </div>
+          <button class="carousel-control next" type="button" aria-label="Ekstrakurikuler berikutnya"><svg
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+              stroke-linejoin="round" aria-hidden="true">
+              <path d="m9 18 6-6-6-6"></path>
+            </svg></button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ACHIEVEMENTS -->
+    <section class="section soft">
+      <div class="container">
+        <div class="section-top-row">
+          <div class="section-head" style="margin-bottom:0;">
+            <span class="section-eyebrow">PRESTASI</span>
+            <h2>Capaian Terbaru Peserta Didik</h2>
+          </div>
+          <a href="./pages/kesiswaan.html" class="link-arrow">Lihat semua prestasi →</a>
+        </div>
+        <div class="achieve-grid">
+          <div class="achieve-card">
+            <div class="tier">Juara Umum</div>
+            <div class="title">Pramuka — Tim Afnasurfa</div>
+            <div class="meta">Kab. Bogor, Nov 2025</div>
+          </div>
+          <div class="achieve-card">
+            <div class="tier">Juara Umum</div>
+            <div class="title">Passus — Tim Cita Muda</div>
+            <div class="meta">Kab. Bogor, Nov 2025</div>
+          </div>
+          <div class="achieve-card">
+            <div class="tier">Juara 1 Provinsi</div>
+            <div class="title">LKBB — Gita Muda</div>
+            <div class="meta">SMK Pertiwi, Jan 2026</div>
+          </div>
+          <div class="achieve-card">
+            <div class="tier">Juara 1</div>
+            <div class="title">Pertolongan Pertama PMR</div>
+            <div class="meta">Bogor Raya, Apr 2026</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEWS -->
+    <section class="section">
+      <div class="container">
+        <div class="section-top-row">
+          <div class="section-head" style="margin-bottom:0;">
+            <span class="section-eyebrow">INFORMASI</span>
+            <h2>Berita &amp; Agenda Sekolah</h2>
+          </div>
+          <a href="./pages/informasi.html" class="link-arrow">Lihat semua informasi →</a>
+        </div>
+        <div class="news-grid">
+          <div class="news-card">
+            <div class="news-top">
+              <div class="news-date">
+                <div class="d">15</div>
+                <div class="m">JUN</div>
+              </div><span class="tag">PENGUMUMAN</span>
+            </div>
+            <div class="news-body">
+              <h3>Sosialisasi SPMB 2026/2027</h3>
+              <p>Undangan bagi Kepala SDN/Swasta/MI untuk sosialisasi Sistem Penerimaan Murid Baru, pukul 09.00 WIB.</p>
+            </div>
+          </div>
+          <div class="news-card">
+            <div class="news-top">
+              <div class="news-date">
+                <div class="d">Agu</div>
+                <div class="m">2026</div>
+              </div><span class="tag">KEGIATAN</span>
+            </div>
+            <div class="news-body">
+              <h3>Cek Kesehatan Gratis (CKG)</h3>
+              <p>Kerja sama dengan Puskesmas untuk pemeriksaan kesehatan siswa, dilaksanakan dua kali setahun.</p>
+            </div>
+          </div>
+          <div class="news-card">
+            <div class="news-top">
+              <div class="news-date">
+                <div class="d">17</div>
+                <div class="m">AGU</div>
+              </div><span class="tag">LIBUR NASIONAL</span>
+            </div>
+            <div class="news-body">
+              <h3>Libur Proklamasi Kemerdekaan RI</h3>
+              <p>Sekolah libur memperingati Hari Kemerdekaan Republik Indonesia ke-81.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PPDB BANNER -->
+    <section class="section soft">
+      <div class="container">
+        <div class="ppdb-banner">
+          <div class="ppdb-text">
+            <span class="tag">PENERIMAAN MURID BARU</span>
+            <h2>SPMB Tahun Pelajaran 2026/2027</h2>
+            <p>Cari tahu jadwal sosialisasi, alur pendaftaran, dan informasi terbaru seputar penerimaan murid baru di
+              SMP Negeri 2 Cibungbulang.</p>
+          </div>
+          <div class="ppdb-cta">
+            <a href="./pages/ppdb.html" class="btn btn-gold">Info PPDB Selengkapnya</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTACT MINI -->
+    <section class="section">
+      <div class="container">
+        <div class="section-head center" style="margin-left:auto;margin-right:auto;">
+          <span class="section-eyebrow">HUBUNGI KAMI</span>
+          <h2>Kunjungi atau Hubungi Sekolah</h2>
+        </div>
+        <div class="contact-mini">
+          <div class="cm-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path>
+                <circle cx="12" cy="10" r="2.5"></circle>
+              </svg></div>
+            <h3>Alamat</h3>
+            <p>Jl. Desa Girimulya RT.02/RW.01, Kec. Cibungbulang, Kab. Bogor</p>
+          </div>
+          <div class="cm-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M5 4h4l2 5-2.5 1.5a14 14 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2C10 20 4 14 4 6a2 2 0 0 1 2-2Z">
+                </path>
+              </svg></div>
+            <h3>Telepon</h3>
+            <p>(0251) 8647771</p>
+          </div>
+          <div class="cm-card">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                <path d="m4 7 8 6 8-6"></path>
+              </svg></div>
+            <h3>E-mail</h3>
+            <p>smpn_2cibungbulang@yahoo.co.id</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <h3>SMPN 2 Cibungbulang</h3>
+          <p>Membangun generasi cerdas, berakhlak mulia, dan berwawasan lingkungan.</p>
+          <div class="footer-social">
+            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="4" y="4" width="16" height="16" rx="4"></rect>
+                <circle cx="12" cy="12" r="3.5"></circle>
+                <circle cx="17.5" cy="6.5" r=".5" fill="currentColor"></circle>
+              </svg></a>
+            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path
+                  d="M13.5 21v-8h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5h1.7V4a22 22 0 0 0-2.5-.2c-2.5 0-4.2 1.5-4.2 4.2V10H7.5v3h2.6v8h3.4Z">
+                </path>
+              </svg></a>
+            <a href="#" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 4v10.5a3.5 3.5 0 1 1-3-3.46"></path>
+                <path d="M14 4c1 2 2.4 3 5 3"></path>
+              </svg></a>
+          </div>
+        </div>
+        <div class="footer-col">
+          <h4>MENU</h4>
+          <ul>
+            <li><a href="./pages/profile.html">Profil</a></li>
+            <li><a href="./pages/akademik.html">Akademik</a></li>
+            <li><a href="./pages/kesiswaan.html">Kesiswaan</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>INFORMASI</h4>
+          <ul>
+            <li><a href="./pages/informasi.html">Berita &amp; Pengumuman</a></li>
+            <li><a href="./pages/ppdb.html">PPDB / SPMB</a></li>
+            <li><a href="./pages/kontak.html">Kontak</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>KONTAK</h4>
+          <ul>
+            <li>(0251) 8647771</li>
+            <li>smpn_2cibungbulang@yahoo.co.id</li>
+            <li>Jl. Desa Girimulya RT.02/RW.01</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 SMP Negeri 2 Cibungbulang. All Rights Reserved.
+      </div>
+    </div>
+  </footer>
+
+  <a class="ai-float" href="../mentor-web/index.html" target="_blank" rel="noopener"
+    aria-label="Buka AI Asisten"><img src="./image/logoaksaraku.png" alt="Logo Aksaraku"></a>
+  <script>
+    const ekskulStrip = document.querySelector('[data-auto-scroll]');
+    const ekskulCarousel = document.querySelector('.ekskul-carousel');
+    if (ekskulStrip && ekskulCarousel) {
+      const ekskulCards = [...ekskulStrip.children];
+      const previousButton = ekskulCarousel.querySelector('.carousel-control.prev');
+      const nextButton = ekskulCarousel.querySelector('.carousel-control.next');
+      let currentCard = 0;
+      let autoScrollTimer;
+      let isPaused = false;
+
+      const showCard = (index) => {
+        currentCard = (index + ekskulCards.length) % ekskulCards.length;
+        ekskulStrip.scrollTo({ left: ekskulCards[currentCard].offsetLeft - 2, behavior: 'smooth' });
+      };
+      const startAutoScroll = () => {
+        if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+          clearInterval(autoScrollTimer);
+          autoScrollTimer = setInterval(() => { if (!isPaused) showCard(currentCard + 1); }, 3500);
+        }
+      };
+
+      previousButton.addEventListener('click', () => { showCard(currentCard - 1); startAutoScroll(); });
+      nextButton.addEventListener('click', () => { showCard(currentCard + 1); startAutoScroll(); });
+      ekskulStrip.addEventListener('mouseenter', () => { isPaused = true; });
+      ekskulStrip.addEventListener('mouseleave', () => { isPaused = false; });
+      ekskulStrip.addEventListener('focusin', () => { isPaused = true; });
+      ekskulStrip.addEventListener('focusout', () => { isPaused = false; });
+      ekskulStrip.addEventListener('touchstart', () => { isPaused = true; }, { passive: true });
+      ekskulStrip.addEventListener('touchend', () => { isPaused = false; }, { passive: true });
+      startAutoScroll();
+    }
+    const socialUrls = { Instagram: 'https://www.instagram.com/smpnduacibungbulang?igsi=NXZva2dyZnQ5dXEx', Facebook: 'https://www.facebook.com/share/1bb8trP3XX/?mibextid=wwXIfr', TikTok: 'https://www.tiktok.com/@smpnduacibungbulang?_r=1&_t=ZS-99Re0dvhYPP' };
+    document.querySelectorAll('.footer-social a').forEach(link => { link.href = socialUrls[link.getAttribute('aria-label')]; link.target = '_blank'; link.rel = 'noopener'; });
+    const menuToggle = document.querySelector('.menu-toggle');
+    const mainNavigation = document.querySelector('#main-navigation');
+    menuToggle.addEventListener('click', () => {
+      const isOpen = mainNavigation.classList.toggle('is-open');
+      menuToggle.setAttribute('aria-expanded', String(isOpen));
+      menuToggle.setAttribute('aria-label', isOpen ? 'Tutup menu navigasi' : 'Buka menu navigasi');
+    });
+    mainNavigation.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+      mainNavigation.classList.remove('is-open');
+      menuToggle.setAttribute('aria-expanded', 'false');
+      menuToggle.setAttribute('aria-label', 'Buka menu navigasi');
+    }));
+  </script>
+</body>
+
+</html>

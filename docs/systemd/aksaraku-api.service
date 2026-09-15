@@ -1,0 +1,22 @@
+[Unit]
+Description=Aksaraku API - FastAPI Backend Service (SMPN 2 Cibungbulang)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/project-necad/services/api
+ExecStart=/var/www/project-necad/services/api/.venv/bin/uvicorn app:app --host 127.0.0.1 --port 3000 --workers 2 --log-level info
+Restart=always
+RestartSec=5
+KillSignal=SIGTERM
+TimeoutStopSec=10
+EnvironmentFile=/var/www/project-necad/services/api/.env
+
+# Security Sandbox
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

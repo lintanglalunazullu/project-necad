@@ -75,7 +75,7 @@ SESSION_HISTORY_LIMIT: int = int(os.getenv("SESSION_HISTORY_LIMIT", "4"))
 
 # ======================= CORS =======================
 # Daftar origin yang boleh akses API. Isi di .env:
-# ALLOWED_ORIGINS=https://domain-kamu.com,http://localhost:8081
+# ALLOWED_ORIGINS=https://smpn2cibungbulang.sch.id,https://mentor.smpn2cibungbulang.sch.id
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "")
 ALLOWED_ORIGINS: list[str] = (
     [o.strip() for o in _raw_origins.split(",") if o.strip()]
@@ -85,8 +85,19 @@ ALLOWED_ORIGINS: list[str] = (
         "http://localhost:8081",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8081",
+        "https://smpn2cibungbulang.sch.id",
+        "https://www.smpn2cibungbulang.sch.id",
+        "https://mentor.smpn2cibungbulang.sch.id",
+        "https://api.smpn2cibungbulang.sch.id",
     ]
 )
+
+# Regex pattern untuk mengizinkan semua subdomain sekolah & localhost secara fleksibel
+ALLOWED_ORIGIN_REGEX: str = os.getenv(
+    "ALLOWED_ORIGIN_REGEX",
+    r"^(https?://([a-zA-Z0-9-]+\.)*smpn2cibungbulang\.sch\.id(:[0-9]+)?|http://(localhost|127\.0\.0\.1)(:[0-9]+)?)$",
+)
+
 
 # ======================= VALIDASI WAJIB =======================
 if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:

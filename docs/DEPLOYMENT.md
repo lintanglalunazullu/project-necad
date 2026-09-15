@@ -1,197 +1,178 @@
-# Panduan Deployment — Project Necad
+# Panduan Deployment 1 Server Hosting (Single VPS) — Project Necad
 
-## Overview Strategi Deployment
+Dokumen ini adalah panduan lengkap deployment seluruh sistem **SMP Negeri 2 Cibungbulang** (Website Sekolah, Portal AI Mentor, dan Backend API) ke dalam **1 Server VPS Tunggal** berbasis **Subdomain**.
+
+---
+
+## 1. Arsitektur Single Server & Subdomain
 
 ```
-school-web  ──► Vercel / Cloudflare Pages (gratis, CDN global)
-mentor-web  ──► Vercel / Cloudflare Pages (gratis, CDN global)
-services/api ─► Railway / Fly.io / VPS Docker (perlu server Python)
+                  ┌────────────────────────────────────────┐
+                  │          INTERNET / PENGGUNA           │
+                  └───────────────────┬────────────────────┘
+                                      │
+                 HTTPS (Port 443) / Let's Encrypt SSL
+                                      ▼
+             ┌──────────────────────────────────────────────────┐
+             │       NGINX REVERSE PROXY (Port 80 / 443)        │
+             └────────┬─────────────────┬─────────────────┬─────┘
+                      │                 │                 │
+     smpn2cibungbulang.sch.id           │                 │
+    (dan www.smpn2cibungbulang.sch.id)  │                 │
+                      │                 │                 │
+                      ▼                 ▼                 ▼
+             ┌────────────────┐ ┌────────────────┐ ┌────────────────┐
+             │ apps/school-web│ │ apps/mentor-web│ │ services/api   │
+             │ (Web Sekolah)  │ │ (Portal Mentor)│ │ (FastAPI venv) │
+             │  Static HTML   │ │  Static HTML   │ │ 127.0.0.1:3000 │
+             └────────────────┘ └────────────────┘ └────────────────┘
 ```
 
-> **Mengapa dipisah hosting?**
-> Backend Python dengan SentenceTransformer membutuhkan memory 500MB–1GB.
-> Frontend static tidak membutuhkan server — host di CDN saja sudah cukup & gratis.
-> Dengan dipisah, jika AI API mengalami masalah, website sekolah tetap online.
+### Keunggulan Arsitektur Ini:
+1. **Biaya Super Hemat**: Hanya butuh 1 VPS (1 vCPU, 1–2 GB RAM seharga Rp 50.000–80.000/bulan).
+2. **Performa Tinggi**: Backend API berbasis FastAPI sangat ringan (~50MB RAM) karena HuggingFace/PyTorch sudah digantikan oleh Gemini & Groq API.
+3. **Smart Auto-Detect**: Frontend otomatis mengenali hostname lokal vs production tanpa perlu mengedit file konfigurasi setiap kali deploy/update.
+4. **Resilience & Keamanan**: Menggunakan Systemd untuk auto-restart jika backend crash, Nginx dengan Gzip, caching aset statis, dan SSL Let's Encrypt gratis.
 
 ---
 
-## 1. Deploy `apps/school-web` → Vercel
+## 2. Pengaturan DNS Domain
 
-### Langkah:
-1. Buka [vercel.com](https://vercel.com) → New Project → Import dari GitHub
-2. Root Directory: `apps/school-web`
-3. Framework Preset: **Other** (static)
-4. Build Command: *(kosongkan)*
-5. Output Directory: `.` (titik)
-6. Klik **Deploy**
+Di panel registrar/DNS domain Anda (misal: Rumahweb, Niagahoster, Cloudflare, IDwebhost):
+Tambahkan DNS Record berikut (ganti `103.xx.xx.xx` dengan IP Publik VPS Anda):
 
-### Custom Domain:
-- Settings → Domains → tambahkan `smpn2cibungbulang.sch.id`
-
----
-
-## 2. Deploy `apps/mentor-web` → Vercel
-
-### Langkah:
-1. Buka [vercel.com](https://vercel.com) → New Project → Import dari GitHub
-2. Root Directory: `apps/mentor-web`
-3. Framework Preset: **Other** (static)
-4. Klik **Deploy**
-
-### Setelah deploy, update API URL:
-Edit `apps/mentor-web/js/config.js`:
-```js
-window.AKSARAKU_CONFIG = Object.freeze({
-  API_BASE_URL: 'https://api.domain-anda.com',  // URL production API
-  SUPABASE_URL: 'https://xxx.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJ...',
-});
-```
-Commit & push → Vercel auto-redeploy.
-
-### Custom Domain:
-- Settings → Domains → tambahkan `aksara.smpn2cibungbulang.sch.id`
+| Tipe | Nama Host / Subdomain | Target / Nilai | TTL | Keterangan |
+|---|---|---|---|---|
+| **A** | `@` | `103.xx.xx.xx` | Auto / 3600 | Website Sekolah utama |
+| **A** | `www` | `103.xx.xx.xx` | Auto / 3600 | Alias Website Sekolah |
+| **A** | `mentor` | `103.xx.xx.xx` | Auto / 3600 | Portal AI Mentor |
+| **A** | `api` | `103.xx.xx.xx` | Auto / 3600 | Backend API & Swagger Docs |
 
 ---
 
-## 3. Deploy `services/api` → Railway (Rekomendasi)
+## 3. Langkah Instalasi di Server VPS (Ubuntu 22.04 / 24.04 LTS)
 
-Railway adalah platform hosting Python/Docker yang mudah & harga terjangkau.
-
-### Langkah:
-1. Buka [railway.app](https://railway.app) → New Project → Deploy from GitHub
-2. Pilih folder `services/api` sebagai root
-3. Railway mendeteksi Python otomatis dari `requirements.txt`
-4. Tambahkan environment variables dari `.env.example` di panel Railway:
-   - Settings → Variables → tambahkan semua vars
-5. Start Command: `uvicorn app:app --host 0.0.0.0 --port $PORT`
-6. Klik **Deploy**
-
-### Custom Domain di Railway:
-- Settings → Networking → Custom Domain: `api.smpn2cibungbulang.sch.id`
-
----
-
-## 4. Deploy `services/api` → Fly.io (Alternatif)
-
-### Install flyctl:
+### Langkah 1: Update Server & Install Paket Dasar
+Login ke VPS via SSH, lalu jalankan:
 ```bash
-curl -L https://fly.io/install.sh | sh
-fly auth login
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git nginx python3 python3-venv python3-pip certbot python3-certbot-nginx
 ```
 
-### Deploy:
+### Langkah 2: Clone Repositori ke Direktori Web
 ```bash
-cd services/api
-fly launch --name aksaraku-api --region sin  # Singapore region, dekat Indonesia
-fly secrets set SUPABASE_URL=https://... GROQ_API_KEY=gsk_...
-fly deploy
+sudo mkdir -p /var/www
+sudo chown -R $USER:$USER /var/www
+cd /var/www
+git clone https://github.com/ReyyIchiro/project-necad.git
+cd /var/www/project-necad
 ```
 
-### Buat `fly.toml` di `services/api/` jika belum ada:
-```toml
-app = "aksaraku-api"
-primary_region = "sin"
-
-[build]
-  builder = "paketobuildpacks/builder:base"
-
-[http_service]
-  internal_port = 3000
-  force_https = true
-  auto_stop_machines = true
-  auto_start_machines = true
-  min_machines_running = 0
-
-[[vm]]
-  memory = "1gb"
-  cpu_kind = "shared"
-  cpus = 1
-```
-
----
-
-## 5. Deploy `services/api` → VPS dengan Docker
-
-### Dockerfile (buat di `services/api/Dockerfile`):
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-COPY . .
-
-EXPOSE 3000
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "3000"]
-```
-
-### Jalankan:
+### Langkah 3: Setup Virtual Environment & Dependensi Backend
 ```bash
-# Build
-docker build -t aksaraku-api ./services/api
-
-# Run
-docker run -d \
-  --name aksaraku-api \
-  --restart always \
-  -p 3000:3000 \
-  --env-file ./services/api/.env \
-  aksaraku-api
+cd /var/www/project-necad/services/api
+python3 -m venv .venv
+source .venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
----
+### Langkah 4: Konfigurasi Environment Variable (`.env`)
+Salin template `.env.example`:
+```bash
+cp .env.example .env
+nano .env
+```
+Isi nilai-nilai wajib:
+- `SUPABASE_URL` & `SUPABASE_SERVICE_ROLE_KEY`: dari Supabase Dashboard.
+- `GEMINI_API_KEY`: API Key dari [Google AI Studio](https://aistudio.google.com/apikey).
+- `GROQ_API_KEY` (opsional): API Key dari [Groq Console](https://console.groq.com/keys).
+- `ALLOWED_ORIGINS`:
+  `https://smpn2cibungbulang.sch.id,https://mentor.smpn2cibungbulang.sch.id`
 
-## Setup Supabase Auth
+Simpan dengan menekan `Ctrl+O` lalu `Enter`, dan keluar dengan `Ctrl+X`.
 
-Setelah deploy mentor-web ke domain resmi, konfigurasi Supabase:
-
-1. Buka **Supabase Dashboard** → Authentication → URL Configuration
-2. **Site URL**: `https://aksara.smpn2cibungbulang.sch.id`
-3. **Redirect URLs**: tambahkan:
-   - `https://aksara.smpn2cibungbulang.sch.id`
-   - `https://aksara.smpn2cibungbulang.sch.id/**`
-4. Authentication → Providers → Google: pastikan sudah aktif
-
----
-
-## Setup CORS di API Production
-
-Perketat CORS di `services/api/app.py` untuk production:
-```python
-# Ganti allow_origins=["*"] dengan domain spesifik:
-app.add_middleware(CORSMiddleware,
-    allow_origins=[
-        "https://smpn2cibungbulang.sch.id",
-        "https://aksara.smpn2cibungbulang.sch.id",
-    ],
-    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allow_headers=["*"],
-)
+### Langkah 5: Pasang Service Systemd (Auto-Start Backend)
+Salin unit service yang sudah disediakan:
+```bash
+sudo cp /var/www/project-necad/docs/systemd/aksaraku-api.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable aksaraku-api
+sudo systemctl start aksaraku-api
 ```
 
+Cek status service untuk memastikan backend sudah running:
+```bash
+sudo systemctl status aksaraku-api
+```
+*(Harus berstatus: `active (running)`)*
+
+### Langkah 6: Pasang Konfigurasi Nginx
+Salin konfigurasi Nginx dari repositori:
+```bash
+sudo cp /var/www/project-necad/docs/nginx/smpn2cibungbulang.conf /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/smpn2cibungbulang.conf /etc/nginx/sites-enabled/
+```
+*(Opsional: hapus konfigurasi default jika tidak dipakai)*
+```bash
+sudo rm -f /etc/nginx/sites-enabled/default
+```
+
+Uji sintaks Nginx dan restart web server:
+```bash
+sudo nginx -t
+sudo systemctl restart nginx
+```
+
+### Langkah 7: Pasang Sertifikat SSL Gratis (HTTPS) via Certbot
+Jalankan satu perintah ini untuk mengaktifkan HTTPS otomatis pada semua domain dan subdomain:
+```bash
+sudo certbot --nginx -d smpn2cibungbulang.sch.id -d www.smpn2cibungbulang.sch.id -d mentor.smpn2cibungbulang.sch.id -d api.smpn2cibungbulang.sch.id
+```
+Certbot akan otomatis memodifikasi konfigurasi Nginx dan mengatur auto-renewal SSL setiap 90 hari.
+
 ---
 
-## GitHub Actions: Supabase Keep-Alive
+## 4. Konfigurasi Supabase Auth untuk Production
 
-File `.github/workflows/supabase-keepalive.yml` sudah ada di root monorepo.
-Tambahkan secrets di GitHub: Settings → Secrets → Actions:
-- `SUPABASE_URL` — URL Supabase project
-- `SUPABASE_ANON_KEY` — Anon key Supabase
-
-Workflow ini berjalan setiap 3 hari untuk mencegah Supabase free tier pause.
+Agar fitur login Google dan sesi auth bekerja di domain produksi:
+1. Buka **[Supabase Dashboard](https://supabase.com/dashboard)** → Pilih project Anda.
+2. Masuk ke menu **Authentication** → **URL Configuration**.
+3. **Site URL**:
+   `https://mentor.smpn2cibungbulang.sch.id`
+4. **Redirect URLs**: tambahkan URL berikut:
+   - `http://localhost:8081`
+   - `http://localhost:8081/**`
+   - `https://mentor.smpn2cibungbulang.sch.id`
+   - `https://mentor.smpn2cibungbulang.sch.id/**`
+5. Klik **Save**.
 
 ---
 
-## Checklist Pre-Launch
+## 5. Pemeliharaan & Update Rutin (Maintenance)
 
-- [ ] `services/api/.env` diisi dengan nilai production
-- [ ] `apps/mentor-web/js/config.js` `API_BASE_URL` diupdate ke URL production
-- [ ] Supabase Auth URL Configuration diupdate
-- [ ] CORS di `services/api/app.py` diperketat ke domain production
-- [ ] Custom domain terpasang di Vercel & Railway/Fly.io
-- [ ] GitHub Actions secrets sudah diisi
-- [ ] Test semua endpoint API di production
-- [ ] Test login Google di production domain
+Jika ada perubahan kode di GitHub yang ingin ditarik ke server:
+```bash
+cd /var/www/project-necad
+git pull origin main
+
+# Update dependensi jika ada perubahan requirements.txt
+source services/api/.venv/bin/activate
+pip install -r services/api/requirements.txt
+
+# Restart backend service
+sudo systemctl restart aksaraku-api
+
+# (Opsional) Reload Nginx jika ada update konfigurasi web
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+### Melihat Log Backend Secara Realtime:
+```bash
+sudo journalctl -u aksaraku-api -f
+```
+
+### Melihat Log Nginx:
+```bash
+sudo tail -f /var/log/nginx/error.log
+```

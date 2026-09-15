@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://smpn2cibungbulang.sch.id/sitemap.xml

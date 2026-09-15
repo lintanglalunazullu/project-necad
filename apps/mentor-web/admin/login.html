@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Aksaraku Admin - Login</title>
+	<link rel="icon" type="image/png" href="../image/logo.png" />
+	<link rel="stylesheet" href="../css/brand.css" />
+	<script src="https://cdn.tailwindcss.com"></script>
+	<link rel="preconnect" href="https://fonts.googleapis.com" />
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap" rel="stylesheet" />
+	<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+	<style>
+		body { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
+		.font-serif-heading { font-family: "Source Serif 4", Georgia, serif; }
+		.admin-glow { background: radial-gradient(circle at 15% 10%, rgba(11, 37, 69, 0.2), transparent 38%), radial-gradient(circle at 90% 85%, rgba(45, 212, 191, 0.1), transparent 35%); }
+	</style>
+</head>
+
+<body class="min-h-screen bg-[#0B0F17] text-[#F3F4F6] antialiased">
+	<main class="admin-glow flex min-h-screen items-center justify-center px-5 py-10">
+		<div class="w-full max-w-md">
+			<div class="mb-8 flex items-center justify-center gap-3">
+				<div class="brand-logo-container">
+					<img src="../image/logo.png" alt="Aksaraku" class="brand-logo brand-logo--auth" />
+				</div>
+				<div>
+					<p class="text-sm font-extrabold tracking-[0.22em] text-white">AKSARAKU</p>
+					<p class="text-[11px] font-semibold tracking-[0.28em] text-purple-400">ADMIN PORTAL</p>
+				</div>
+			</div>
+
+			<section class="rounded-2xl border border-white/10 bg-[#121824]/95 p-7 shadow-2xl shadow-black/30 sm:p-9">
+				<div class="mb-7">
+					<p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-purple-300">Area terbatas</p>
+					<h1 class="font-serif-heading text-3xl font-bold text-white">Masuk sebagai admin</h1>
+					<p class="mt-2 text-sm leading-relaxed text-[#9CA3AF]">Kelola konten dan data akademik Aksaraku dari satu tempat.</p>
+				</div>
+
+				<form id="adminLoginForm" class="space-y-5" novalidate>
+					<div>
+						<label for="email" class="mb-2 block text-sm font-medium text-[#D1D5DB]">Email admin</label>
+						<div class="relative">
+							<i data-lucide="mail" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]"></i>
+							<input id="email" name="email" type="email" autocomplete="username" required placeholder="admin@aksaraku.id"
+								class="w-full rounded-lg border border-white/10 bg-[#0F172A] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-[#6B7280] focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20" />
+						</div>
+					</div>
+
+					<div>
+						<div class="mb-2 flex items-center justify-between gap-3">
+							<label for="password" class="block text-sm font-medium text-[#D1D5DB]">Kata sandi</label>
+							<button type="button" id="togglePassword" class="text-xs font-medium text-purple-300 transition hover:text-purple-200">Tampilkan</button>
+						</div>
+						<div class="relative">
+							<i data-lucide="lock-keyhole" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]"></i>
+							<input id="password" name="password" type="password" autocomplete="current-password" required placeholder="Masukkan kata sandi"
+								class="w-full rounded-lg border border-white/10 bg-[#0F172A] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-[#6B7280] focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20" />
+						</div>
+					</div>
+
+					<p id="loginMessage" class="hidden rounded-lg border px-3 py-2 text-sm" role="alert"></p>
+					<a href="../teacher/login.html" class="block text-center text-sm text-purple-300 hover:text-purple-200">Login sebagai teacher</a>
+
+					<button id="loginButton" type="submit"
+						class="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-60">
+						<i data-lucide="log-in" class="h-4 w-4"></i>
+						<span>Masuk ke dashboard</span>
+					</button>
+				</form>
+			</section>
+
+			<p class="mt-6 text-center text-xs text-[#6B7280]">Akses ini hanya untuk pengelola Aksaraku.</p>
+		</div>
+	</main>
+
+	<script>lucide.createIcons();</script>
+	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+	<script src="../js/config.js"></script>
+	<script src="../js/auth-role.js"></script>
+	<script src="../js/admin-login.js"></script>
+</body>
+
+</html>

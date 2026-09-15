@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aksaraku Admin - Keluar</title>
+  <link rel="icon" type="image/png" href="../image/logo.png" />
+  <link rel="stylesheet" href="../css/brand.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>body { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }</style>
+</head>
+<body class="flex min-h-screen items-center justify-center bg-[#0B0F17] px-5 text-[#F3F4F6] antialiased">
+  <main class="w-full max-w-md rounded-2xl border border-white/10 bg-[#121824] p-8 text-center shadow-2xl">
+    <div class="brand-logo-container brand-logo-container--centered"><img src="../image/logo.png" alt="Aksaraku" class="brand-logo brand-logo--auth" /></div>
+    <h1 class="text-2xl font-bold text-white">Keluar dari portal admin?</h1>
+    <p class="mt-3 text-sm text-[#9CA3AF]">Sesi admin akan diakhiri pada perangkat ini.</p>
+    <div class="mt-7 flex gap-3">
+      <a href="./index.html" class="flex-1 rounded-lg border border-white/10 px-4 py-3 text-sm font-semibold text-[#D1D5DB] transition hover:bg-white/5">Batal</a>
+      <button id="signOutButton" type="button" class="flex-1 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-purple-500">Ya, keluar</button>
+    </div>
+    <p id="signOutMessage" class="mt-5 hidden text-sm text-red-200" role="alert"></p>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/config.js"></script>
+  <script>
+    const supabaseClient = window.supabase.createClient(
+      window.AKSARAKU_CONFIG.SUPABASE_URL,
+      window.AKSARAKU_CONFIG.SUPABASE_ANON_KEY,
+    );
+    const signOutMessage = document.getElementById('signOutMessage');
+
+    function clearSupabaseLocalSession() {
+      const storageKey = `sb-${new URL(window.AKSARAKU_CONFIG.SUPABASE_URL).hostname.split('.')[0]}-auth-token`;
+      window.localStorage.removeItem(storageKey);
+      window.sessionStorage.removeItem(storageKey);
+      localStorage.removeItem('aksaraku_chat_session_id');
+    }
+
+    document.getElementById('signOutButton').addEventListener('click', async (event) => {
+      event.currentTarget.disabled = true;
+      event.currentTarget.textContent = 'Keluar...';
+      const { error } = await supabaseClient.auth.signOut({ scope: 'global' });
+      if (error) {
+        signOutMessage.textContent = 'Gagal keluar. Silakan coba lagi.';
+        signOutMessage.classList.remove('hidden');
+        event.currentTarget.disabled = false;
+        event.currentTarget.textContent = 'Ya, keluar';
+        return;
+      }
+      clearSupabaseLocalSession();
+      window.location.replace('./login.html');
+    });
+  </script>
+</body>
+</html>

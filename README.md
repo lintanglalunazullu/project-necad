@@ -25,9 +25,7 @@ project-necad/
 ├── docs/
 │   ├── supabase_setup.sql       # SQL: Skema database lengkap (tabel, RPC, RLS, seed data)
 │   ├── ARCHITECTURE.md          # Diagram & penjelasan arsitektur sistem
-│   ├── DEPLOYMENT.md            # Panduan deployment lengkap
-│   ├── ai_provider_config.sql   # SQL: Tabel config AI provider (sudah include di supabase_setup.sql)
-│   └── migration_embedding_768.sql  # SQL: Migrasi embedding 384→768 (opsional)
+│   └── DEPLOYMENT.md            # Panduan deployment lengkap
 └── .github/
     └── workflows/
         ├── lint.yml            # Lint & test Python on PR
@@ -221,7 +219,7 @@ POST /admin/ai/providers/test
 { "provider": "gemini", "prompt": "Halo, siapa kamu?" }
 ```
 
-Untuk config yang **survive server restart**, jalankan SQL di `docs/ai_provider_config.sql` di Supabase.
+Untuk config yang **survive server restart**, tabel `ai_provider_config` sudah otomatis dibuat saat menjalankan `docs/supabase_setup.sql`.
 
 ---
 
@@ -233,7 +231,7 @@ Kalau kamu upgrade dari v2 (pakai HuggingFace):
 2. **Hapus** `HUGGINGFACE_API_KEY` dan `HUGGINGFACE_EMBEDDING_MODEL` dari `.env`
 3. **Putuskan dimensi embedding:**
    - Tetap `384`: set `EXPECTED_EMBEDDING_DIMENSION=384` (backward compat, data lama tetap bisa dipakai)
-   - Upgrade ke `768`: set `EXPECTED_EMBEDDING_DIMENSION=768`, lalu jalankan `docs/migration_embedding_768.sql` dan re-embed semua dokumen
+   - Upgrade ke `768`: set `EXPECTED_EMBEDDING_DIMENSION=768`, lalu ikuti panduan upgrade di Bagian 8 file `docs/supabase_setup.sql`
 4. **Install ulang dependencies:** `pip install -r requirements.txt`
 
 ---

@@ -6,9 +6,12 @@ const sendBtn = document.getElementById("sendBtn");
 const chatThread = document.getElementById("chatThread");
 const threadInner = chatThread.querySelector(".max-w-3xl");
 
-const SUPABASE_URL = 'https://pwohquppbydpycpqwxtg.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3b2hxdXBwYnlkcHljcHF3eHRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU1MjYyNTUsImV4cCI6MjEwMTEwMjI1NX0.QUmKNTzaw88NZqb7ihR9Mgm7laJzm6_-M7Ktz0hNcGU';
-const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+// Ambil credentials dari config.js — jangan hardcode di sini
+const SUPABASE_URL = window.AKSARAKU_CONFIG?.SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = window.AKSARAKU_CONFIG?.SUPABASE_ANON_KEY || '';
+const supabaseClient = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY)
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 const sessionList = document.getElementById('sessionList');
 const sessionStatus = document.getElementById('sessionStatus');
 const chatHistoryPanel = document.getElementById('chatHistoryPanel');

@@ -1,4 +1,4 @@
-# services/api/app.py — Entry point FastAPI (ringan, cuma setup + register routes)
+# services/api/app.py — Entry point FastAPI
 import logging
 
 from fastapi import FastAPI, Request
@@ -31,7 +31,7 @@ supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_SERVICE_RO
 app = FastAPI(
     title="Aksaraku API",
     description="Backend RAG untuk AI Mentor Aksaraku — SMP Negeri 2 Cibungbulang",
-    version="2.0.0",
+    version="3.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -41,7 +41,6 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # ======================= CORS (Security Fix) =======================
-# Whitelist origin berdasarkan ENV, bukan allow_origins=["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.ALLOWED_ORIGINS,
@@ -53,29 +52,56 @@ app.add_middleware(
 # ======================= STARTUP EVENT =======================
 @app.on_event("startup")
 async def startup_event():
-    """Pre-load embedding model saat startup biar request pertama tidak lambat."""
-    logger.info("🚀 Aksaraku API starting up...")
+    """Inisialisasi saat startup: load AI provider config dari DB."""
+    logger.info("🚀 Aksaraku API v3.0 starting up...")
     logger.info("CORS allowed origins: %s", config.ALLOWED_ORIGINS)
-    # Trigger lazy load model embedding
-    from rag.embedding import get_model
-    get_model()
+
+    # Load AI provider manager + sync dari DB kalau tabelnya ada
+    from ai.generation import get_provider_manager
+    manager = get_provider_manager()
+    updated = manager.reload_from_db(supabase)
+    if updated:
+        logger.info("✅ AI provider config dimuat dari DB: %s provider", updated)
+
+    active = manager.get_sorted_providers()
+    logger.info(
+        "✅ AI providers aktif: %s",
+        ", ".join(f"{p.name}(priority={p.priority}, model={p.model})" for p in active),
+    )
     logger.info("✅ Aksaraku API siap menerima request.")
+
 
 # ======================= ROUTES =======================
 app.include_router(admin_router)
 app.include_router(documents_router)
 app.include_router(chat_router)
 
+
 @app.get("/health", tags=["system"])
 async def health():
-    """Health check endpoint."""
+    """Health check endpoint — tampilkan status provider AI yang aktif."""
+    from ai.generation import get_provider_manager
+    manager = get_provider_manager()
+    active = manager.get_sorted_providers()
+
     return {
         "status": "ok",
         "service": "Aksaraku",
-        "embedding_model": config.HUGGINGFACE_EMBEDDING_MODEL,
-        "embedding_dimension": config.EXPECTED_EMBEDDING_DIMENSION,
-        "rag_top_k": config.RAG_TOP_K,
-        "rag_final_k": config.RAG_FINAL_K,
-        "context_tokens": config.MAX_CONTEXT_TOKENS,
+        "version": "3.0.0",
+        "embedding": {
+            "provider": "gemini",
+            "model": config.GEMINI_EMBEDDING_MODEL,
+            "dimension": config.EXPECTED_EMBEDDING_DIMENSION,
+        },
+        "llm_providers": [
+            {"name": p.name, "model": p.model, "priority": p.priority, "healthy": p.is_healthy}
+            for p in active
+        ],
+        "rag": {
+            "top_k": config.RAG_TOP_K,
+            "final_k": config.RAG_FINAL_K,
+            "min_similarity": config.RAG_MIN_SIMILARITY,
+            "compress_context": config.COMPRESS_CONTEXT,
+        },
         "cors_origins": config.ALLOWED_ORIGINS,
     }

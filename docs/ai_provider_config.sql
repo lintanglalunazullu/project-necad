@@ -1,5 +1,6 @@
 -- ============================================================
 -- SQL: Tabel ai_provider_config untuk Aksaraku API v3.0
+-- (CATATAN: Script ini sudah termasuk lengkap di docs/supabase_setup.sql)
 -- Jalankan di Supabase SQL Editor kalau mau config AI provider
 -- survive server restart (opsional — kalau tidak dijalankan,
 -- config tetap bisa diubah tapi reset ke ENV saat restart).

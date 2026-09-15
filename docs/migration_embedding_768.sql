@@ -1,6 +1,7 @@
 -- ============================================================
 -- SQL: Migrasi embedding dari 384 dimensi (HuggingFace)
 -- ke 768 dimensi (Gemini text-embedding-004)
+-- (Panduan ini juga tercantum di Bagian 8 pada docs/supabase_setup.sql)
 --
 -- JALANKAN HANYA JIKA:
 -- - Kamu set EXPECTED_EMBEDDING_DIMENSION=768 di .env

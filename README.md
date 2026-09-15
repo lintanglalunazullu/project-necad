@@ -23,9 +23,10 @@ project-necad/
 │   ├── dev.sh          # Jalankan semua service sekaligus (dev mode)
 │   └── stop.sh         # Hentikan semua service
 ├── docs/
+│   ├── supabase_setup.sql       # SQL: Skema database lengkap (tabel, RPC, RLS, seed data)
 │   ├── ARCHITECTURE.md          # Diagram & penjelasan arsitektur sistem
 │   ├── DEPLOYMENT.md            # Panduan deployment lengkap
-│   ├── ai_provider_config.sql   # SQL: Tabel config AI provider (opsional)
+│   ├── ai_provider_config.sql   # SQL: Tabel config AI provider (sudah include di supabase_setup.sql)
 │   └── migration_embedding_768.sql  # SQL: Migrasi embedding 384→768 (opsional)
 └── .github/
     └── workflows/
@@ -49,10 +50,14 @@ cd project-necad
 cp services/api/.env.example services/api/.env
 # Edit services/api/.env — isi: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY
 
-# 3. Kasih izin eksekusi (sekali aja)
+# 3. Setup Database Supabase (sekali aja)
+# Buka Supabase Dashboard → SQL Editor → New Query
+# Salin seluruh isi file docs/supabase_setup.sql, tempel, lalu klik RUN
+
+# 4. Kasih izin eksekusi (sekali aja)
 chmod +x scripts/dev.sh scripts/stop.sh
 
-# 4. Jalankan SEMUA service sekaligus
+# 5. Jalankan SEMUA service sekaligus
 ./scripts/dev.sh
 ```
 

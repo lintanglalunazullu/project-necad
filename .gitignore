@@ -61,6 +61,7 @@ Desktop.ini
 *.bak
 *.tmp
 *.temp
+.dev.pids
 
 # -------------------- DATA / PRE-COMPUTED EMBEDDINGS ----------
 apps/mentor-web/data/

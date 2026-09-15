@@ -83,18 +83,36 @@ if (processBtn) {
 
 // 2. Fungsi unggah ke backend untuk embedding dan penyimpanan Supabase
 async function uploadChunksToBackend(payload) {
+  let token = null;
+  try {
+    const supabaseClient = window.createAksarakuClient
+      ? window.createAksarakuClient()
+      : (window.supabase && window.AKSARAKU_CONFIG
+          ? window.supabase.createClient(window.AKSARAKU_CONFIG.SUPABASE_URL, window.AKSARAKU_CONFIG.SUPABASE_ANON_KEY)
+          : null);
+    if (supabaseClient) {
+      const { data: { session } } = await supabaseClient.auth.getSession();
+      token = session?.access_token;
+    }
+  } catch (e) {
+    console.warn('Gagal mengambil session Supabase untuk upload:', e);
+  }
+
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  };
+
   const response = await fetch(EMBED_UPSERT_URL, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(payload),
   });
 
   const result = await response.json();
   if (!response.ok) {
     console.error('Backend embed-upsert error:', result);
-    throw new Error(result.error || result.message || 'Gagal melakukan embed-upsert ke backend.');
+    throw new Error(result.detail || result.error || result.message || 'Gagal melakukan embed-upsert ke backend.');
   }
 
   if (!result.data || !Array.isArray(result.data)) {

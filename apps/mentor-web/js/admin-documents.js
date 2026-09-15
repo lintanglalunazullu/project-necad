@@ -83,12 +83,28 @@
   }
 
   async function request(path, options = {}) {
+    let token = access?.session?.access_token;
+    if (!token && access?.client?.auth) {
+      try {
+        const { data: { session } } = await access.client.auth.getSession();
+        token = session?.access_token;
+      } catch (err) {
+        console.warn('Gagal mengambil session auth:', err);
+      }
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    };
+
     const response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      headers,
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || result.message || `Request gagal (${response.status})`);
+    if (!response.ok) throw new Error(result.detail || result.error || result.message || `Request gagal (${response.status})`);
     return result;
   }
 

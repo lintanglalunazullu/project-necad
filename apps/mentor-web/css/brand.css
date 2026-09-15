@@ -1,0 +1,196 @@
+.brand-theme {
+  --color-primary: #0B2545;
+  --color-primary-hover: #123A63;
+  --color-primary-text: #9BD1FF;
+  --color-primary-soft: rgba(11, 37, 69, 0.15);
+  --color-primary-border: rgba(11, 37, 69, 0.4);
+}
+
+[class~="bg-purple-600"],
+[class~="bg-purple-700"],
+[class~="bg-purple-500"] {
+  background-color: #0B2545 !important;
+}
+
+[class~="bg-purple-700\/80"] {
+  background-color: #123A63 !important;
+  border-left: 3px solid #9BD1FF !important;
+}
+
+[class~="hover:bg-purple-700"]:hover,
+[class~="hover:bg-purple-600"]:hover,
+[class~="hover:bg-purple-500"]:hover,
+[class~="hover:bg-purple-500\/10"]:hover,
+[class~="active:bg-purple-800"]:active {
+  background-color: #123A63 !important;
+}
+
+[class~="text-purple-400"],
+[class~="text-purple-300"],
+[class~="text-purple-200"],
+[class~="text-purple-500"] {
+  color: #9BD1FF !important;
+}
+
+[class~="text-purple-900"] {
+  color: #9BD1FF !important;
+}
+
+[class*="hover:text-purple-"]:hover {
+  color: #9BD1FF !important;
+}
+
+[class~="bg-sidebar"] {
+  background-color: #0B2545 !important;
+}
+
+[class~="border-purple-500"],
+[class~="border-purple-500\/40"],
+[class~="focus:border-purple-500"]:focus,
+[class~="focus:border-purple-400"]:focus {
+  border-color: #0B2545 !important;
+}
+
+[class~="focus:ring-purple-400\/20"]:focus {
+  --tw-ring-color: rgba(11, 37, 69, 0.2) !important;
+}
+
+[class*="from-purple-"] {
+  --tw-gradient-from: #0B2545 !important;
+  --tw-gradient-to: rgb(11 37 69 / 0) !important;
+}
+
+[class*="via-purple-"] {
+  --tw-gradient-to: #0B2545 !important;
+}
+
+[class*="to-indigo-"] {
+  --tw-gradient-to: #0B2545 !important;
+}
+
+#newResearchBtn {
+  background-color: #123A63 !important;
+}
+
+#newResearchBtn:hover {
+  background-color: #041c35 !important;
+}
+
+#newResearchBtn:active {
+  background-color: #041c35 !important;
+}
+
+[class~="bg-purple-500\/10"],
+[class~="bg-purple-500\/15"],
+[class~="bg-purple-900\/50"],
+[class~="hover:bg-purple-500\/10"]:hover {
+  background-color: rgba(11, 37, 69, 0.15) !important;
+}
+
+[class~="shadow-purple-900\/30"],
+[class~="shadow-purple-900\/20"] {
+  --tw-shadow-color: rgba(11, 37, 69, 0.3) !important;
+}
+
+[class~="ring-purple-500"] {
+  --tw-ring-color: #0B2545 !important;
+}
+
+[class*="text-\[#9D8CFC\]"],
+[class*="text-\[#C4C7FF\]"],
+[class*="text-\[#0B2545\]"] {
+  color: #9BD1FF !important;
+}
+
+[class*="bg-\[#C4C7FF\]"],
+[class*="border-\[#C4C7FF\]"] {
+  background-color: #0B2545 !important;
+  border-color: #0B2545 !important;
+}
+
+#usersTable_wrapper .dt-paging-button.current {
+  background: #0B2545 !important;
+  border-color: #0B2545 !important;
+}
+
+.brand-logo {
+  width: 80px;
+  height: auto;
+  object-fit: contain;
+}
+
+.brand-logo-container {
+  /* width: 100px; */
+  /* min-width: 100px; */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand-logo-container--centered {
+  margin-inline: auto;
+}
+
+.brand-logo--auth {
+  width: 100px;
+  height: auto;
+}
+
+.brand-logo--small {
+  width: 100px;
+  height: auto;
+}
+
+.chat-markdown > :first-child { margin-top: 0; }
+.chat-markdown > :last-child { margin-bottom: 0; }
+.chat-markdown p { margin: 0.65rem 0; }
+.chat-markdown h3 { margin: 1rem 0 0.45rem; color: #fff; font-size: 1rem; font-weight: 700; line-height: 1.45; }
+.chat-markdown strong { color: #fff; font-weight: 700; }
+.chat-markdown em { color: #d1d5db; }
+.chat-markdown code { border-radius: .25rem; background: rgba(255,255,255,.08); padding: .1rem .3rem; color: #c4e4ff; font-size: .9em; }
+.chat-markdown ul, .chat-markdown ol { margin: .65rem 0; padding-left: 1.35rem; list-style-position: outside !important; }
+.chat-markdown ul { list-style-type: disc !important; }
+.chat-markdown ol { list-style-type: decimal !important; }
+.chat-markdown ol.chat-list-alpha { list-style-type: lower-alpha !important; }
+.chat-markdown li { margin: .25rem 0; padding-left: .2rem; }
+
+@keyframes aiReplyEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes aiThinkingPulse {
+  0%, 100% {
+    opacity: 0.72;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.ai-reply-bubble {
+  animation: aiReplyEnter 0.35s ease-out both;
+}
+
+.ai-thinking-bubble {
+  animation: aiThinkingPulse 1.8s ease-in-out infinite;
+}
+
+.ai-thinking-label {
+  animation: aiThinkingPulse 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-reply-bubble,
+  .ai-thinking-bubble,
+  .ai-thinking-label {
+    animation: none;
+  }
+}

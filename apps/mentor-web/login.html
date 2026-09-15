@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aksaraku AI — Login Portal</title>
+  <link rel="icon" type="image/png" href="./image/logo.png" />
+  <link rel="stylesheet" href="./css/brand.css" />
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            workspace: "#0B0F17",
+            heroCard: "#121824",
+            featureCard: "#161C2A",
+          },
+          fontFamily: {
+            sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+            serif: ["'Source Serif 4'", "Georgia", "serif"],
+          },
+          keyframes: {
+            fadeUp: {
+              "0%": { opacity: 0, transform: "translateY(10px)" },
+              "100%": { opacity: 1, transform: "translateY(0)" },
+            },
+            drift: {
+              "0%, 100%": { transform: "translate(0, 0)" },
+              "50%": { transform: "translate(12px, -10px)" },
+            },
+          },
+          animation: {
+            fadeUp: "fadeUp 0.5s ease-out",
+            drift: "drift 10s ease-in-out infinite",
+          },
+        },
+      },
+    };
+  </script>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,500;1,8..60,600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+  <style>
+    body {
+      font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    }
+
+    .font-serif-heading {
+      font-family: "Source Serif 4", Georgia, serif;
+    }
+
+    .bg-radial-glow {
+      background: radial-gradient(circle at 30% 20%, rgba(11, 37, 69, 0.16) 0%, rgba(11, 37, 69, 0) 55%);
+    }
+
+    .watermark-ring {
+      position: absolute;
+      border: 1px solid rgba(148, 163, 184, 0.08);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+
+<body class="bg-workspace text-[#F3F4F6] antialiased">
+
+  <div class="relative min-h-screen w-full flex flex-col overflow-hidden">
+
+  <!-- Top-left brand logo -->
+    <div class="absolute top-6 left-6 md:top-8 md:left-8 z-20 flex items-center">
+      <div
+        class="brand-logo-container">
+        <img src="./image/logo.png" alt="Aksaraku" class="brand-logo" />
+      </div>
+      <span class="text-base font-bold text-white">Aksaraku AI</span>
+    </div>
+
+    <!-- Main split layout -->
+    <main class="flex-1 flex flex-col lg:flex-row items-stretch">
+
+      <!-- ================= LEFT: Hero / Branding ================= -->
+      <section
+        class="relative w-full lg:w-1/2 flex items-center justify-center px-6 md:px-12 pt-24 pb-10 lg:py-12 overflow-hidden">
+
+        <!-- Watermark vectors -->
+        <div class="pointer-events-none absolute inset-0 overflow-hidden">
+          <span class="watermark-ring animate-drift"
+            style="width:320px; height:320px; top:-60px; left:-80px; animation-delay:0s;"></span>
+          <span class="watermark-ring animate-drift"
+            style="width:220px; height:220px; bottom:5%; right:5%; animation-delay:2s;"></span>
+          <span class="watermark-ring" style="width:480px; height:480px; top:35%; left:20%; opacity:0.6;"></span>
+          <div class="absolute inset-0 bg-radial-glow"></div>
+        </div>
+
+        <div
+          class="relative w-full max-w-md rounded-2xl bg-heroCard/60 border border-slate-800/80 backdrop-blur-sm p-7 md:p-9 animate-fadeUp">
+
+          <h1 class="font-serif-heading text-3xl md:text-4xl leading-tight text-white">
+            Masa Depan
+            <br />
+            <span
+              class="italic text-white">
+              Akademik Cerdas.
+            </span>
+          </h1>
+
+          <p class="text-sm text-[#9CA3AF] leading-relaxed mt-4 max-w-sm">
+            Masuk ke ekosistem pendidikan berbasis AI yang dirancang untuk presisi, efisiensi,
+            dan pertumbuhan berkelanjutan bagi pengajar dan pengelola sekolah.
+          </p>
+
+          <!-- Feature highlights -->
+          <div class="grid grid-cols-2 gap-3 mt-8">
+            <div class="rounded-xl bg-featureCard/70 border border-slate-800 p-4">
+              <p class="text-sm font-semibold text-white">Analisis AI</p>
+              <p class="text-xs text-[#6B7280] mt-1 leading-relaxed">Data akademik real-time.</p>
+            </div>
+
+            <div class="rounded-xl bg-featureCard/70 border border-slate-800 p-4">
+              <p class="text-sm font-semibold text-white">Akses Aman</p>
+              <p class="text-xs text-[#6B7280] mt-1 leading-relaxed">Enkripsi tingkat institusi.</p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= RIGHT: SSO Login ================= -->
+      <section
+        class="w-full lg:w-1/2 flex items-center justify-center px-6 md:px-12 py-12 lg:py-12 border-t border-white/5 lg:border-t-0 lg:border-l lg:border-white/5">
+        <div class="w-full max-w-sm animate-fadeUp">
+
+          <h2 class="font-serif-heading text-2xl md:text-3xl font-bold text-white">Selamat Datang</h2>
+          <p class="text-sm text-[#9CA3AF] mt-2 leading-relaxed">
+            Silakan masuk untuk mengakses portal akademik Anda.
+          </p>
+
+          <!-- SSO Button -->
+          <button id="btn-google" type="button" onclick="loginWithGoogle()"
+            class="mt-8 w-full rounded-lg bg-white text-gray-900 hover:bg-gray-100 transition-colors py-3 px-4 font-medium flex items-center justify-center gap-3 shadow-md">
+            <svg class="w-5 h-5" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path fill="#FFC107"
+                d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+              <path fill="#FF3D00"
+                d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+              <path fill="#4CAF50"
+                d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+              <path fill="#1976D2"
+                d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
+            </svg>
+            Masuk dengan Google
+          </button>
+
+          <!-- Divider -->
+          <div class="flex items-center gap-3 mt-6">
+            <span class="h-px flex-1 bg-white/10"></span>
+            <span class="text-[11px] text-[#6B7280] uppercase tracking-wider">Single Sign-On</span>
+            <span class="h-px flex-1 bg-white/10"></span>
+          </div>
+
+          <!-- Help link -->
+          <p class="text-center text-sm text-[#9CA3AF] mt-6">
+            Kesulitan mengakses akun?
+            <a href="https://wa.me/6285771571369" class="text-purple-300 hover:text-purple-200 font-medium transition-colors">WhatsApp</a>
+            Atau
+            <a href="https://mail.google.com/mail/?view=cm&amp;fs=1&amp;to=lintanglalunazullu@gmail.com"
+              target="_blank" rel="noopener noreferrer"
+              class="relative z-10 inline-block cursor-pointer text-purple-300 hover:text-purple-200 font-medium underline transition-colors">
+              Kirim Ke Email
+            </a>
+          </p>
+          
+
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative z-10 px-6 md:px-8 py-5">
+      <p class="text-xs text-[#4B5563]">
+        © <span id="copyright-year"></span> Aksaraku Portal AI. <span class="mx-1">•</span>
+        <a href="./syarat-ketentuan.html" class="hover:text-[#6B7280] transition-colors">Syarat &amp; Ketentuan</a>
+      </p>
+    </footer>
+
+  </div>
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/config.js"></script>
+  <script src="./js/auth-role.js"></script>
+
+  <script src="./js/login.js"></script>
+
+  <script>
+    document.getElementById("copyright-year").textContent = new Date().getFullYear();
+  </script>
+
+
+</body>
+
+</html>

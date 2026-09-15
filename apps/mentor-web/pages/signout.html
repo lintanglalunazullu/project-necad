@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Aksaraku AI — Logout Confirmation</title>
+<link rel="icon" type="image/png" href="../image/logo.png" />
+<link rel="stylesheet" href="../css/brand.css" />
+
+<!-- Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          workspace: "#0B0F17",
+          sidebar: "#121824",
+          modalCard: "#161B26",
+        },
+        fontFamily: {
+          sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+          serif: ["'Source Serif 4'", "Georgia", "serif"],
+        },
+        keyframes: {
+          fadeIn: {
+            "0%": { opacity: 0 },
+            "100%": { opacity: 1 },
+          },
+          scaleIn: {
+            "0%": { opacity: 0, transform: "scale(0.95) translateY(6px)" },
+            "100%": { opacity: 1, transform: "scale(1) translateY(0)" },
+          },
+        },
+        animation: {
+          fadeIn: "fadeIn 0.2s ease-out",
+          scaleIn: "scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        },
+      },
+    },
+  };
+</script>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap"
+  rel="stylesheet"
+/>
+
+<!-- Lucide Icons -->
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+<style>
+  body { font-family: "Inter", ui-sans-serif, system-ui, sans-serif; }
+  .font-serif-heading { font-family: "Source Serif 4", Georgia, serif; }
+</style>
+</head>
+
+<body class="bg-workspace text-[#F3F4F6] antialiased h-screen w-full overflow-hidden">
+
+  <!-- ================= DEMO PAGE BEHIND THE MODAL ================= -->
+  <div class="relative h-full w-full flex flex-col items-center justify-center px-6">
+    <div class="flex items-center gap-2.5 mb-6">
+      <div class="brand-logo-container">
+        <img src="../image/logo.png" alt="Aksaraku" class="brand-logo" />
+      </div>
+      <span class="text-base font-bold text-white">Aksaraku AI</span>
+    </div>
+
+    <p class="text-sm text-[#9CA3AF] mb-6 text-center max-w-xs">
+      Contoh halaman di belakang modal. Klik tombol di bawah untuk membuka konfirmasi keluar.
+    </p>
+
+    <button
+      id="openLogoutModalBtn"
+      class="flex items-center gap-2 bg-[#1A202C] border border-slate-700 hover:bg-slate-800 transition-colors text-sm font-medium text-slate-300 px-4 py-2.5 rounded-lg"
+    >
+      <i data-lucide="log-out" class="w-4 h-4"></i>
+      Sign Out
+    </button>
+  </div>
+
+  <!-- ================= LOGOUT CONFIRMATION MODAL ================= -->
+  <div
+    id="logoutModalOverlay"
+    class="hidden fixed inset-0 z-50 items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="logoutModalTitle"
+  >
+    <div
+      id="logoutModalCard"
+      class="w-full max-w-md p-8 rounded-2xl bg-modalCard border border-slate-800 text-center shadow-2xl flex flex-col items-center animate-scaleIn"
+    >
+
+      <!-- Top hero icon -->
+      <div class="w-16 h-16 rounded-full bg-[#202538] flex items-center justify-center mb-6">
+        <i data-lucide="log-out" class="text-[#0B2545] w-7 h-7"></i>
+      </div>
+
+      <!-- Title -->
+      <h2 id="logoutModalTitle" class="font-serif-heading text-xl md:text-2xl font-bold text-white mb-3">
+        Apakah Anda yakin ingin keluar?
+      </h2>
+
+      <!-- Description -->
+      <p class="text-sm text-slate-400 mb-8 max-w-xs leading-relaxed">
+        Pastikan semua riset dan tugas Anda telah tersimpan dengan aman di sistem Aksaraku AI.
+      </p>
+
+      <!-- Action buttons -->
+      <button
+        id="confirmLogoutBtn"
+        type="button"
+        class="w-full py-3 px-4 rounded-xl bg-[#0B2545] text-white font-medium flex items-center justify-center gap-2 hover:bg-[#123A63] transition-all mb-3"
+      >
+        Ya, Keluar
+        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+      </button>
+
+      <button
+        id="cancelLogoutBtn"
+        type="button"
+        class="w-full py-3 px-4 rounded-xl bg-[#1D2332] border border-slate-700/60 text-slate-300 font-medium hover:bg-slate-800 transition-all mb-8"
+      >
+        Batal
+      </button>
+
+      <!-- Footer brand badge -->
+      <div class="flex items-center justify-center gap-2 text-slate-400 text-sm font-semibold">
+        <div class="w-6 h-6 rounded-md bg-[#202538] flex items-center justify-center">
+          <img src="../image/logo.png" alt="Aksaraku" class="brand-logo brand-logo--small" />
+        </div>
+        Aksaraku AI
+      </div>
+
+    </div>
+  </div>
+
+<script>
+  lucide.createIcons();
+
+  const overlay = document.getElementById("logoutModalOverlay");
+  const modalCard = document.getElementById("logoutModalCard");
+  const openBtn = document.getElementById("openLogoutModalBtn");
+  const cancelBtn = document.getElementById("cancelLogoutBtn");
+  const confirmBtn = document.getElementById("confirmLogoutBtn");
+
+  function openLogoutModal() {
+    overlay.classList.remove("hidden");
+    overlay.classList.add("flex");
+    overlay.classList.remove("animate-fadeIn");
+    modalCard.classList.remove("animate-scaleIn");
+    void overlay.offsetWidth; // force reflow to restart animation
+    overlay.classList.add("animate-fadeIn");
+    modalCard.classList.add("animate-scaleIn");
+
+    document.body.classList.add("overflow-hidden");
+    confirmBtn.focus();
+    document.addEventListener("keydown", handleEscKey);
+  }
+
+  function closeLogoutModal() {
+    overlay.classList.add("hidden");
+    overlay.classList.remove("flex");
+    document.body.classList.remove("overflow-hidden");
+    document.removeEventListener("keydown", handleEscKey);
+    openBtn.focus();
+  }
+
+  function handleEscKey(e) {
+    if (e.key === "Escape") closeLogoutModal();
+  }
+
+  openBtn.addEventListener("click", openLogoutModal);
+  cancelBtn.addEventListener("click", closeLogoutModal);
+
+  // Click on backdrop (outside the card) closes the modal
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closeLogoutModal();
+  });
+
+  confirmBtn.addEventListener("click", () => {
+    confirmBtn.disabled = true;
+    confirmBtn.classList.add("opacity-70", "cursor-not-allowed");
+    confirmBtn.innerHTML = `
+      <svg class="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      </svg>
+      Keluar...
+    `;
+
+    logout().catch(() => {
+      confirmBtn.disabled = false;
+      confirmBtn.classList.remove("opacity-70", "cursor-not-allowed");
+      confirmBtn.textContent = "Ya, Keluar";
+    });
+  });
+</script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="../js/logout.js"></script>
+
+</body>
+</html>

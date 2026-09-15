@@ -1,0 +1,46 @@
+# .github/workflows/deploy-web.yml
+# Auto-deploy school-web dan mentor-web ke Vercel saat ada push ke main
+# Setup: tambahkan VERCEL_TOKEN, VERCEL_ORG_ID di GitHub Secrets
+name: Deploy Frontend ke Vercel
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "apps/**"
+
+jobs:
+  deploy-school-web:
+    name: Deploy school-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy school-web ke Vercel
+        working-directory: apps/school-web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel --prod --yes \
+            --token "$VERCEL_TOKEN"
+
+  deploy-mentor-web:
+    name: Deploy mentor-web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Deploy mentor-web ke Vercel
+        working-directory: apps/mentor-web
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          vercel --prod --yes \
+            --token "$VERCEL_TOKEN"

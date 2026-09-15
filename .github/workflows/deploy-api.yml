@@ -1,0 +1,27 @@
+# .github/workflows/deploy-api.yml
+# Auto-deploy services/api ke Railway saat ada push ke main
+# Setup: tambahkan RAILWAY_TOKEN di GitHub Secrets, link project Railway ke repo
+name: Deploy API ke Railway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "services/api/**"
+
+jobs:
+  deploy-api:
+    name: Deploy FastAPI ke Railway
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy ke Railway
+        working-directory: services/api
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: railway up --service aksaraku-api

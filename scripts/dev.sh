@@ -58,11 +58,12 @@ VENV_DIR="$REPO_ROOT/services/api/.venv"
 if [[ ! -d "$VENV_DIR" ]]; then
   echo -e "${CYAN}📦  Virtual environment belum ada, bikin dulu...${NC}"
   python3 -m venv "$VENV_DIR"
-  echo -e "${CYAN}📦  Install dependensi Python...${NC}"
   "$VENV_DIR/bin/pip" install --quiet --upgrade pip
-  "$VENV_DIR/bin/pip" install --quiet -r "$REPO_ROOT/services/api/requirements.txt"
-  echo -e "${GREEN}✅  Dependensi Python berhasil diinstall.${NC}"
 fi
+
+echo -e "${CYAN}📦  Memeriksa dependensi Python...${NC}"
+"$VENV_DIR/bin/pip" install --quiet -r "$REPO_ROOT/services/api/requirements.txt"
+echo -e "${GREEN}✅  Dependensi Python siap.${NC}"
 
 # ---- Cek apakah port sudah dipakai ----
 check_port() {
@@ -102,7 +103,10 @@ echo -e "${CYAN}▶  Menjalankan Backend API...${NC}"
 ) &
 echo $! >> "$PID_FILE"
 
-sleep 1  # kasih jeda supaya port 3000 sempat kebuka
+sleep 2  # kasih jeda supaya backend API sempat startup
+if ! lsof -Pi :3000 -sTCP:LISTEN -t >/dev/null 2>&1; then
+  echo -e "${RED}${BOLD}❌  Backend API belum berjalan di port 3000! Cek pesan error di atas.${NC}"
+fi
 
 # ---- Jalankan School Web ----
 echo -e "${CYAN}▶  Menjalankan Website Sekolah (port 8080)...${NC}"

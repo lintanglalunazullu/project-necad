@@ -61,7 +61,10 @@ async def query_docs(request: Request, body: QueryRequest, authorization: Option
     if not question:
         raise HTTPException(400, "question is required")
 
-    question_embedding = embed_query(question)
+    try:
+        question_embedding = embed_query(question)
+    except Exception as embed_err:
+        raise HTTPException(400, f"Gagal generate embedding: {embed_err}")
     retrieved = get_similar_documents(supabase, question_embedding, role, config.RAG_TOP_K, question)
     docs = rerank_documents(question, filter_documents_for_role(retrieved, role), config.RAG_FINAL_K)
     return {"data": public_sources(docs)}
@@ -110,7 +113,28 @@ async def chat(request: Request, body: QueryRequest, authorization: Optional[str
 
     # ========= NORMAL RAG SEARCH =========
     else:
-        search_embedding = embed_query(search_query)
+        try:
+            search_embedding = embed_query(search_query)
+        except Exception as embed_err:
+            err_str = str(embed_err)
+            logger.error("Embedding generation failed: %s", err_str)
+            if "API key not valid" in err_str or "API_KEY_INVALID" in err_str or "wajib diisi" in err_str:
+                msg = (
+                    "⚠️ **GEMINI_API_KEY** belum diisi atau tidak valid di file `services/api/.env`.\n\n"
+                    "Untuk mengaktifkan fitur tanya-jawab AI, silakan dapatkan API Key gratis di "
+                    "[Google AI Studio](https://aistudio.google.com/apikey) lalu masukkan ke `services/api/.env`."
+                )
+                if persist_session:
+                    save_message(supabase, body.session_id, "assistant", msg)
+                return {
+                    "answer": msg,
+                    "session_id": body.session_id if persist_session else None,
+                    "provider": None,
+                    "sources": [],
+                    "evidence": {"confidence": 0.0, "supported": False},
+                }
+            raise HTTPException(500, f"Gagal memproses embedding dokumen: {err_str}")
+
         retrieved = get_similar_documents(supabase, search_embedding, role, config.RAG_TOP_K, search_query)
         accessible_documents = filter_documents_for_role(retrieved, role)
         docs = rerank_documents(search_query, accessible_documents, config.RAG_FINAL_K)

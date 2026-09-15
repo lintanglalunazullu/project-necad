@@ -89,12 +89,12 @@ CREATE TABLE IF NOT EXISTS public.pdf_documents (
 
 -- Fungsi helper untuk update kolom updated_at otomatis
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS TRIGGER AS 149625
+RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
     RETURN NEW;
 END;
-149625 LANGUAGE plpgsql;
+$$ LANGUAGE plpgsql;
 
 -- Trigger updated_at untuk profiles
 DROP TRIGGER IF EXISTS tr_profiles_updated_at ON public.profiles;
@@ -116,7 +116,7 @@ CREATE TRIGGER tr_ai_provider_config_updated_at
 
 -- Fungsi & Trigger otomatis membuat profil saat user baru mendaftar di auth.users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER AS 149625
+RETURNS TRIGGER AS $$
 BEGIN
     INSERT INTO public.profiles (id, email, full_name, role, provider)
     VALUES (
@@ -141,7 +141,7 @@ BEGIN
         updated_at = NOW();
     RETURN NEW;
 END;
-149625 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
@@ -168,7 +168,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS 149625
+AS $$
 BEGIN
     RETURN QUERY
     SELECT
@@ -183,7 +183,7 @@ BEGIN
     ORDER BY p.embedding <=> query_embedding ASC
     LIMIT match_count;
 END;
-149625;
+$$;
 
 -- 2. Keyword Search Function (Full-Text Search + ILIKE Fallback)
 CREATE OR REPLACE FUNCTION public.search_pdf_documents_keyword(
@@ -200,7 +200,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS 149625
+AS $$
 BEGIN
     RETURN QUERY
     SELECT
@@ -218,7 +218,7 @@ BEGIN
     ORDER BY similarity DESC
     LIMIT result_limit;
 END;
-149625;
+$$;
 
 -- 3. Exact Match Search Function (Untuk NISN, NIP, Tanggal, Angka, Istilah Pasti)
 CREATE OR REPLACE FUNCTION public.search_pdf_documents_exact(
@@ -235,7 +235,7 @@ RETURNS TABLE (
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS 149625
+AS $$
 BEGIN
     RETURN QUERY
     SELECT
@@ -249,7 +249,7 @@ BEGIN
        OR p.pdf_name ILIKE '%' || search_term || '%'
     LIMIT result_limit;
 END;
-149625;
+$$;
 
 -- ==============================================================================
 -- BAGIAN 5: ROW LEVEL SECURITY (RLS) & POLICIES

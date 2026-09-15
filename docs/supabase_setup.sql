@@ -1,21 +1,21 @@
 -- ==============================================================================
--- AKSARAKU / PROJECT NECAD — UNIFIED SUPABASE SETUP & SCHEMA
+-- AKSARAKU / PROJECT NECAD — ULTIMATE SUPABASE SETUP & SCHEMA
 -- ==============================================================================
 -- File ini menyatukan SELURUH kebutuhan database Supabase:
 -- 1. Extensions (pgvector, uuid-ossp, pg_trgm)
--- 2. Tables (profiles, chat_sessions, chat_messages, ai_provider_config, pdf_documents)
--- 3. Functions & Triggers (handle_new_user, updated_at auto-updater)
+-- 2. Tables & Column Alignment (profiles, chat_sessions, chat_messages, ai_provider_config, pdf_documents)
+-- 3. Helper Functions & Triggers (is_admin, is_teacher_or_admin, updated_at, handle_new_user)
 -- 4. RPC Search Functions (match_pdf_documents, search_pdf_documents_keyword, search_pdf_documents_exact)
--- 5. Row Level Security (RLS) & Policies
+-- 5. Row Level Security (RLS) & Security Policies (Zero Infinite Recursion)
 -- 6. Performance Indexes (HNSW vector index, GIN text search, B-Trees)
--- 7. Seed Data (AI providers config + 28 dokumen profil & pedoman sekolah SMPN 2 Cibungbulang)
--- 8. Auto-sync Sequence (mencegah error duplikasi ID saat upload dokumen baru)
+-- 7. Seed Data (AI providers config + 28 dokumen sekolah)
+-- 8. Safe Sequence Synchronization
 --
--- CARA PAKAI:
--- 1. Buka Supabase Dashboard -> Project kamu -> SQL Editor -> New Query
--- 2. Salin dan tempel (copy-paste) SEMUA isi file ini ke SQL Editor
--- 3. Klik tombol "Run" (atau Ctrl+Enter)
--- 4. Selesai! Database siap 100% untuk backend & frontend.
+-- CATATAN KOMPATIBILITAS (Zero Failure):
+-- - Aman dijalankan di database kosong (fresh) maupun database yang SUDAH ADA datanya.
+-- - Secara otomatis menambahkan kolom-kolom baru (ADD COLUMN IF NOT EXISTS) jika tabel lama belum lengkap.
+-- - Secara otomatis membersihkan fungsi lama (DROP FUNCTION) sebelum memasang fungsi baru (bebas error 42P13).
+-- - Kebijakan RLS menggunakan fungsi SECURITY DEFINER sehingga bebas error infinite recursion.
 -- ==============================================================================
 
 -- ==============================================================================
@@ -26,7 +26,7 @@ CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- ==============================================================================
--- BAGIAN 2: TABEL-TABEL UTAMA
+-- BAGIAN 2: TABEL-TABEL UTAMA & SINKRONISASI STRUKTUR KOLOM
 -- ==============================================================================
 
 -- 1. Tabel Profiles (Manajemen Pengguna & Role: user, teacher, admin)
@@ -39,6 +39,12 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS full_name TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'email';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- 2. Tabel Chat Sessions (Riwayat Percakapan AI Mentor)
 CREATE TABLE IF NOT EXISTS public.chat_sessions (
@@ -48,6 +54,10 @@ CREATE TABLE IF NOT EXISTS public.chat_sessions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE public.chat_sessions ADD COLUMN IF NOT EXISTS user_id UUID;
+ALTER TABLE public.chat_sessions ADD COLUMN IF NOT EXISTS title TEXT NOT NULL DEFAULT 'Sesi chat baru';
+ALTER TABLE public.chat_sessions ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.chat_sessions ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- 3. Tabel Chat Messages (Pesan Chat Tiap Sesi)
 CREATE TABLE IF NOT EXISTS public.chat_messages (
@@ -58,22 +68,37 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     inserted_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS session_id TEXT;
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user';
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.chat_messages ADD COLUMN IF NOT EXISTS inserted_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+-- Sinkronkan created_at dan inserted_at bila salah satu kolom masih kosong di database lama
+UPDATE public.chat_messages SET created_at = inserted_at WHERE created_at IS NULL AND inserted_at IS NOT NULL;
+UPDATE public.chat_messages SET inserted_at = created_at WHERE inserted_at IS NULL AND created_at IS NOT NULL;
 
 -- 4. Tabel AI Provider Config (Pengaturan Model, Suhu, Timeout, Priority & Fallback)
 CREATE TABLE IF NOT EXISTS public.ai_provider_config (
-    id TEXT PRIMARY KEY,                       -- 'gemini', 'groq', 'openrouter'
+    id TEXT PRIMARY KEY,
     enabled BOOLEAN NOT NULL DEFAULT true,
     model TEXT NOT NULL,
     temperature FLOAT NOT NULL DEFAULT 0.2,
     max_tokens INT NOT NULL DEFAULT 600,
-    priority INT NOT NULL DEFAULT 1,           -- 1 = prioritas tertinggi
+    priority INT NOT NULL DEFAULT 1,
     timeout FLOAT NOT NULL DEFAULT 30.0,
     system_prompt_extra TEXT DEFAULT '',
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS enabled BOOLEAN NOT NULL DEFAULT true;
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS model TEXT NOT NULL DEFAULT 'gemini-2.0-flash';
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS temperature FLOAT NOT NULL DEFAULT 0.2;
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS max_tokens INT NOT NULL DEFAULT 600;
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS priority INT NOT NULL DEFAULT 1;
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS timeout FLOAT NOT NULL DEFAULT 30.0;
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS system_prompt_extra TEXT DEFAULT '';
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- 5. Tabel PDF Documents (Knowledge Base RAG & Vector Embeddings)
--- Default menggunakan vector(384) agar 28 dokumen bawaan langsung aktif.
 CREATE TABLE IF NOT EXISTS public.pdf_documents (
     id BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
     pdf_name TEXT NOT NULL,
@@ -82,12 +107,57 @@ CREATE TABLE IF NOT EXISTS public.pdf_documents (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     embedding vector(384)
 );
+ALTER TABLE public.pdf_documents ADD COLUMN IF NOT EXISTS pdf_name TEXT NOT NULL DEFAULT 'document';
+ALTER TABLE public.pdf_documents ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'public';
+ALTER TABLE public.pdf_documents ADD COLUMN IF NOT EXISTS content TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.pdf_documents ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+ALTER TABLE public.pdf_documents ADD COLUMN IF NOT EXISTS embedding vector(384);
+
+-- Jika tabel pdf_documents lama menggunakan nama kolom 'text' bukannya 'content', migrasikan otomatis:
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'pdf_documents' AND column_name = 'text'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_schema = 'public' AND table_name = 'pdf_documents' AND column_name = 'content'
+    ) THEN
+        ALTER TABLE public.pdf_documents RENAME COLUMN text TO content;
+    END IF;
+END $$;
 
 -- ==============================================================================
--- BAGIAN 3: AUTOMATION TRIGGERS & FUNCTIONS
+-- BAGIAN 3: HELPER FUNCTIONS & AUTOMATION TRIGGERS
 -- ==============================================================================
 
--- Fungsi helper untuk update kolom updated_at otomatis
+-- 1. Helper Function: Cek status Admin (SECURITY DEFINER agar bebas infinite recursion di RLS)
+CREATE OR REPLACE FUNCTION public.is_admin(user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = user_id AND role = 'admin'
+    );
+$$;
+
+-- 2. Helper Function: Cek status Teacher atau Admin
+CREATE OR REPLACE FUNCTION public.is_teacher_or_admin(user_id uuid)
+RETURNS boolean
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    SELECT EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE id = user_id AND role IN ('admin', 'teacher')
+    );
+$$;
+
+-- 3. Fungsi helper untuk update kolom updated_at otomatis
 CREATE OR REPLACE FUNCTION public.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -114,7 +184,7 @@ CREATE TRIGGER tr_ai_provider_config_updated_at
     BEFORE UPDATE ON public.ai_provider_config
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
--- Fungsi & Trigger otomatis membuat profil saat user baru mendaftar di auth.users
+-- 4. Fungsi & Trigger otomatis membuat profil saat user baru mendaftar di auth.users
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -152,7 +222,7 @@ CREATE TRIGGER on_auth_user_created
 -- BAGIAN 4: RPC FUNCTIONS (HYBRID SEARCH PIPELINE)
 -- ==============================================================================
 
--- Hapus fungsi lama jika sudah ada (karena Postgres tidak mengizinkan perubahan return type table dengan CREATE OR REPLACE)
+-- Hapus fungsi lama jika sudah ada (mencegah error 42P13 saat mengganti signature)
 DO $$
 DECLARE
     r RECORD;
@@ -191,10 +261,10 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        p.id,
-        p.pdf_name,
-        p.category,
-        p.content,
+        p.id::bigint AS id,
+        p.pdf_name::text AS pdf_name,
+        p.category::text AS category,
+        p.content::text AS content,
         (1 - (p.embedding <=> query_embedding))::float AS similarity
     FROM public.pdf_documents p
     WHERE p.embedding IS NOT NULL
@@ -223,16 +293,16 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        p.id,
-        p.pdf_name,
-        p.category,
-        p.content,
+        p.id::bigint AS id,
+        p.pdf_name::text AS pdf_name,
+        p.category::text AS category,
+        p.content::text AS content,
         GREATEST(
-            ts_rank(to_tsvector('simple', p.content), plainto_tsquery('simple', search_query)),
+            ts_rank(to_tsvector('simple', COALESCE(p.content, '')), plainto_tsquery('simple', search_query)),
             CASE WHEN p.content ILIKE '%' || search_query || '%' THEN 0.5 ELSE 0.0 END
         )::float AS similarity
     FROM public.pdf_documents p
-    WHERE to_tsvector('simple', p.content) @@ plainto_tsquery('simple', search_query)
+    WHERE to_tsvector('simple', COALESCE(p.content, '')) @@ plainto_tsquery('simple', search_query)
        OR p.content ILIKE '%' || search_query || '%'
     ORDER BY similarity DESC
     LIMIT result_limit;
@@ -258,10 +328,10 @@ AS $$
 BEGIN
     RETURN QUERY
     SELECT
-        p.id,
-        p.pdf_name,
-        p.category,
-        p.content,
+        p.id::bigint AS id,
+        p.pdf_name::text AS pdf_name,
+        p.category::text AS category,
+        p.content::text AS content,
         1.0::float AS similarity
     FROM public.pdf_documents p
     WHERE p.content ILIKE '%' || search_term || '%'
@@ -281,7 +351,7 @@ ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ai_provider_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pdf_documents ENABLE ROW LEVEL SECURITY;
 
--- --- Service Role Policies (Bypass untuk Backend FastApi) ---
+-- --- Service Role Policies (Bypass untuk Backend FastAPI) ---
 DROP POLICY IF EXISTS "service_role_profiles" ON public.profiles;
 CREATE POLICY "service_role_profiles" ON public.profiles FOR ALL TO service_role USING (true) WITH CHECK (true);
 
@@ -317,22 +387,12 @@ CREATE POLICY "profiles_insert_own" ON public.profiles
 DROP POLICY IF EXISTS "profiles_teacher_admin_select" ON public.profiles;
 CREATE POLICY "profiles_teacher_admin_select" ON public.profiles
     FOR SELECT TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles p
-            WHERE p.id = auth.uid() AND p.role IN ('admin', 'teacher')
-        )
-    );
+    USING (public.is_teacher_or_admin(auth.uid()));
 
 DROP POLICY IF EXISTS "profiles_admin_all" ON public.profiles;
 CREATE POLICY "profiles_admin_all" ON public.profiles
     FOR ALL TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles p
-            WHERE p.id = auth.uid() AND p.role = 'admin'
-        )
-    );
+    USING (public.is_admin(auth.uid()));
 
 -- --- Chat Sessions Policies ---
 DROP POLICY IF EXISTS "chat_sessions_user_all" ON public.chat_sessions;
@@ -368,22 +428,14 @@ DROP POLICY IF EXISTS "pdf_documents_read_authorized" ON public.pdf_documents;
 CREATE POLICY "pdf_documents_read_authorized" ON public.pdf_documents
     FOR SELECT TO authenticated
     USING (
-        category = 'public' OR EXISTS (
-            SELECT 1 FROM public.profiles p
-            WHERE p.id = auth.uid() AND p.role IN ('admin', 'teacher')
-        )
+        category = 'public' OR public.is_teacher_or_admin(auth.uid())
     );
 
 -- --- AI Provider Config Policies ---
 DROP POLICY IF EXISTS "ai_provider_config_admin_read" ON public.ai_provider_config;
 CREATE POLICY "ai_provider_config_admin_read" ON public.ai_provider_config
     FOR SELECT TO authenticated
-    USING (
-        EXISTS (
-            SELECT 1 FROM public.profiles p
-            WHERE p.id = auth.uid() AND p.role = 'admin'
-        )
-    );
+    USING (public.is_admin(auth.uid()));
 
 -- ==============================================================================
 -- BAGIAN 6: PERFORMANCE INDEXES
@@ -397,7 +449,7 @@ CREATE INDEX IF NOT EXISTS idx_pdf_documents_embedding_hnsw
 -- Full-Text Search GIN Index
 CREATE INDEX IF NOT EXISTS idx_pdf_documents_content_fts 
     ON public.pdf_documents 
-    USING gin (to_tsvector('simple', content));
+    USING gin (to_tsvector('simple', COALESCE(content, '')));
 
 -- Standard B-Tree Indexes
 CREATE INDEX IF NOT EXISTS idx_pdf_documents_category 

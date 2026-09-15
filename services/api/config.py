@@ -14,20 +14,24 @@ EXACT_FUNCTION: str = os.getenv("SUPABASE_EXACT_FUNCTION", "search_pdf_documents
 SUPABASE_METADATA_COLUMN: str = os.getenv("SUPABASE_METADATA_COLUMN", "metadata")
 SUPABASE_USE_METADATA: bool = os.getenv("SUPABASE_USE_METADATA", "false").lower() in {"1", "true", "yes"}
 
-# ======================= EMBEDDING =======================
-HUGGINGFACE_API_KEY: str | None = os.getenv("HUGGINGFACE_API_KEY")
-HUGGINGFACE_EMBEDDING_MODEL: str = os.getenv(
-    "HUGGINGFACE_EMBEDDING_MODEL", "sentence-transformers/all-MiniLM-L6-v2"
-)
-EXPECTED_EMBEDDING_DIMENSION: int = int(
-    os.getenv(
-        "EXPECTED_EMBEDDING_DIMENSION",
-        os.getenv("HUGGINGFACE_EXPECTED_EMBEDDING_DIMENSION", "384"),
-    )
-)
-HUGGINGFACE_EMBEDDING_RETRIES: int = max(1, int(os.getenv("HUGGINGFACE_EMBEDDING_RETRIES", "3")))
+# ======================= AI PROVIDER CONFIG TABLE =======================
+# Nama tabel Supabase untuk menyimpan konfigurasi AI provider secara persistent.
+# Kalau tabelnya belum ada, fallback ke konfigurasi ENV (tidak error).
+AI_CONFIG_TABLE: str = os.getenv("AI_CONFIG_TABLE", "ai_provider_config")
+
+# ======================= EMBEDDING (Gemini) =======================
+GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "models/text-embedding-004")
+# Dimensi output embedding. Gemini text-embedding-004 support 256/512/768.
+# Default 768 untuk akurasi maksimal. Sesuaikan dengan kolom vector di Supabase.
+EXPECTED_EMBEDDING_DIMENSION: int = int(os.getenv("EXPECTED_EMBEDDING_DIMENSION", "768"))
+EMBEDDING_RETRIES: int = max(1, int(os.getenv("EMBEDDING_RETRIES", "3")))
 
 # ======================= LLM PROVIDERS =======================
+# --- Gemini ---
+GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.0-flash")
+
+# --- Groq (support multi-key round-robin) ---
 GROQ_API_KEYS: list[str] = [
     v
     for v in (
@@ -39,6 +43,7 @@ GROQ_API_KEYS: list[str] = [
 ]
 GROQ_CHAT_MODEL: str = os.getenv("GROQ_CHAT_MODEL", "llama-3.3-70b-versatile")
 
+# --- OpenRouter (support multi-key round-robin) ---
 OPENROUTER_API_KEYS: list[str] = [
     v
     for v in (
@@ -48,12 +53,9 @@ OPENROUTER_API_KEYS: list[str] = [
     )
     if v
 ]
-OPENROUTER_CHAT_MODEL: str = os.getenv("OPENROUTER_CHAT_MODEL", "openrouter/free")
+OPENROUTER_CHAT_MODEL: str = os.getenv("OPENROUTER_CHAT_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
 OPENROUTER_SITE_URL: str = os.getenv("OPENROUTER_SITE_URL", "http://localhost:3000")
 OPENROUTER_SITE_NAME: str = os.getenv("OPENROUTER_SITE_NAME", "Aksaraku")
-
-PRIMARY_LLM_PROVIDER: str = os.getenv("PRIMARY_LLM_PROVIDER", "groq").strip().lower()
-LLM_PROVIDER_MAX_ATTEMPTS: int = max(1, int(os.getenv("LLM_PROVIDER_MAX_ATTEMPTS", "12")))
 
 # ======================= TOKEN LIMITS =======================
 MAX_INPUT_TOKENS: int = int(os.getenv("MAX_INPUT_TOKENS", "3500"))
@@ -89,3 +91,9 @@ ALLOWED_ORIGINS: list[str] = (
 # ======================= VALIDASI WAJIB =======================
 if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
     raise RuntimeError("SUPABASE_URL dan SUPABASE_SERVICE_ROLE_KEY wajib diisi di .env")
+
+if not GEMINI_API_KEY:
+    raise RuntimeError(
+        "GEMINI_API_KEY wajib diisi di .env. "
+        "Dapatkan gratis di: https://aistudio.google.com/apikey"
+    )

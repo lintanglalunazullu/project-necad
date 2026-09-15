@@ -1,0 +1,63 @@
+# =============================================================
+# project-necad — Unified .gitignore
+# =============================================================
+
+# -------------------- ENVIRONMENT ----------------------------
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# -------------------- PYTHON (services/api) ------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+*.log
+.pytest_cache/
+.mypy_cache/
+htmlcov/
+.coverage
+
+# -------------------- JAVASCRIPT / NODE ----------------------
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.pnpm-store/
+.next/
+out/
+dist/
+
+# -------------------- OS / EDITOR ----------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/settings.json
+.vscode/launch.json
+
+# -------------------- VERCEL / DEPLOYMENT --------------------
+.vercel/
+.netlify/
+
+# -------------------- MISC -----------------------------------
+*.bak
+*.tmp
+*.temp

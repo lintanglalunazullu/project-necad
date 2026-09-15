@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aksaraku Teacher - Login</title>
+  <link rel="icon" type="image/png" href="../image/logo.png" />
+  <link rel="stylesheet" href="../css/brand.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { workspace: '#0B0F17', sidebar: '#121824' }, fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'], serif: ["'Source Serif 4'", 'Georgia', 'serif'] } } } };
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body class="min-h-screen bg-workspace text-[#F3F4F6] antialiased">
+  <div class="flex min-h-screen items-center justify-center px-5 py-10">
+  <main class="w-full max-w-md rounded-2xl border border-white/10 bg-[#121824] p-7 shadow-2xl shadow-black/30 sm:p-9">
+    <div class="mb-8 flex items-center justify-center gap-3"><div class="brand-logo-container"><img src="../image/logo.png" alt="Aksaraku" class="brand-logo brand-logo--auth" /></div><div class="leading-tight"><p class="text-sm font-extrabold tracking-[0.22em] text-white">AKSARAKU</p><p class="text-[11px] font-semibold tracking-[0.28em] text-purple-400">TEACHER PORTAL</p></div></div>
+    <div class="mb-7"><p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-purple-300">Area terbatas</p><h1 class="font-serif-heading text-3xl font-bold text-white">Masuk sebagai teacher</h1><p class="mt-2 text-sm leading-relaxed text-[#9CA3AF]">Gunakan email dan password Supabase Anda.</p></div>
+    <form id="teacherLoginForm" class="space-y-5">
+      <div><label for="email" class="mb-2 block text-sm font-medium text-[#D1D5DB]">Email teacher</label><div class="relative"><i data-lucide="mail" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]"></i><input id="email" type="email" required autocomplete="username" placeholder="teacher@aksaraku.id" class="w-full rounded-lg border border-white/10 bg-[#0F172A] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-[#6B7280] focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20" /></div></div>
+      <div><label for="password" class="mb-2 block text-sm font-medium text-[#D1D5DB]">Kata sandi</label><div class="relative"><i data-lucide="lock-keyhole" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6B7280]"></i><input id="password" type="password" required autocomplete="current-password" placeholder="Masukkan kata sandi" class="w-full rounded-lg border border-white/10 bg-[#0F172A] py-3 pl-10 pr-4 text-sm text-white outline-none transition placeholder:text-[#6B7280] focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20" /></div></div>
+      <p id="loginMessage" class="hidden rounded-lg border border-red-400/30 bg-red-400/10 px-3 py-2 text-sm text-red-200" role="alert"></p>
+      <button id="loginButton" type="submit" class="flex w-full items-center justify-center gap-2 rounded-lg bg-purple-600 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-purple-900/20 transition hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-60"><i data-lucide="log-in" class="h-4 w-4"></i><span>Masuk ke ruang teacher</span></button>
+    </form>
+    <a href="../login.html" class="mt-6 block text-center text-sm text-purple-300 hover:text-purple-200">Kembali ke pilihan login</a>
+  </main>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/auth-role.js"></script>
+  <script>
+    const client = window.createAksarakuClient();
+    const form = document.getElementById('teacherLoginForm');
+    const message = document.getElementById('loginMessage');
+    const button = document.getElementById('loginButton');
+
+    function showError(text) {
+      message.textContent = text;
+      message.classList.remove('hidden');
+    }
+
+    async function redirectTeacher() {
+      if (!client) return;
+      const { data: { session } } = await client.auth.getSession();
+      if (session?.user && await window.getAksarakuUserRole(client, session.user) === 'teacher') {
+        window.location.replace('./chat.html');
+      }
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      button.disabled = true;
+      message.classList.add('hidden');
+      const { data, error } = await client.auth.signInWithPassword({
+        email: document.getElementById('email').value.trim(),
+        password: document.getElementById('password').value,
+      });
+      if (error) {
+        showError('Email atau password tidak sesuai.');
+        button.disabled = false;
+        return;
+      }
+      const role = await window.getAksarakuUserRole(client, data.user);
+      if (role !== 'teacher') {
+        await client.auth.signOut();
+        showError('Akun ini tidak memiliki role teacher.');
+        button.disabled = false;
+        return;
+      }
+      window.location.replace('./chat.html');
+    });
+
+    redirectTeacher().catch(() => showError('Sesi login tidak dapat diperiksa.'));
+    lucide.createIcons();
+  </script>
+</body>
+</html>

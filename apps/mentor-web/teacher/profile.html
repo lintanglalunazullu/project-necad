@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aksaraku Teacher — Profil</title>
+    <link rel="icon" type="image/png" href="../image/logo.png" />
+    <link rel="stylesheet" href="../css/brand.css" />
+
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        workspace: "#0B0F17",
+                        sidebar: "#121824",
+                        card: "#161B26",
+                        card2: "#181E2A",
+                    },
+                    fontFamily: {
+                        sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"],
+                        serif: ["'Source Serif 4'", "Georgia", "serif"],
+                    },
+                    keyframes: {
+                        fadeUp: {
+                            "0%": { opacity: 0, transform: "translateY(8px)" },
+                            "100%": { opacity: 1, transform: "translateY(0)" },
+                        },
+                    },
+                    animation: {
+                        fadeUp: "fadeUp 0.35s ease-out",
+                    },
+                },
+            },
+        };
+    </script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap"
+        rel="stylesheet" />
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+
+    <style>
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: #2a3242 transparent;
+        }
+
+        *::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        *::-webkit-scrollbar-thumb {
+            background-color: #2a3242;
+            border-radius: 999px;
+        }
+
+        *::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        body {
+            font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+        }
+
+        .font-serif-heading {
+            font-family: "Source Serif 4", Georgia, serif;
+        }
+    </style>
+</head>
+
+<body class="bg-workspace text-[#F3F4F6] antialiased">
+
+    <div class="flex h-screen w-full overflow-hidden">
+
+        <div data-mobile-sidebar-overlay class="fixed inset-0 z-40 hidden bg-black/60 md:hidden"></div>
+
+        <!-- ================= SIDEBAR ================= -->
+        <aside data-mobile-sidebar
+            class="fixed inset-y-0 left-0 z-50 hidden w-[248px] flex-col bg-sidebar border-r border-white/5 h-full md:static md:flex md:w-[248px] md:shrink-0">
+
+            <!-- Brand -->
+            <div class="px-5 pt-6 pb-5">
+                <div class="flex items-center gap-2.5">
+                    <div class="brand-logo-container">
+                        <img src="../image/logo.png" alt="Aksaraku" class="brand-logo" />
+                    </div>
+                    <div class="leading-tight">
+                        <p class="text-[13px] font-extrabold tracking-wide text-white">AKSARAKU</p>
+                        <p class="text-[10px] font-semibold tracking-[0.18em] text-purple-400">TEACHER PORTAL</p>
+                    </div>
+                </div>
+
+                <button id="newResearchBtn" type="button"
+                    class="mt-5 w-full flex items-center justify-center gap-1.5 rounded-lg bg-purple-700 hover:bg-purple-700 transition-colors text-sm font-semibold py-2.5 shadow-md shadow-purple-900/30">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Chat Baru
+                </button>
+            </div>
+
+            <!-- Main nav -->
+            <nav class="px-3 mt-2 flex-1 flex flex-col min-h-0">
+                <p class="px-2.5 mb-2 text-[11px] font-semibold uppercase tracking-wider text-[#6B7280]">Menu Teacher</p>
+                <ul class="space-y-1">
+                    <li>
+                        <a href="./chat.html"
+                            class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-purple-700/80 text-white text-sm font-semibold shadow-inner">
+                            <i data-lucide="message-circle" class="w-4 h-4"></i>
+                            Chat
+                        </a>
+                    </li>
+                </ul>
+                <div class="mt-6 px-1 flex-1 min-h-0 flex flex-col">
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-[#6B7280] mb-3">Riwayat Chat</p>
+                    <div id="sessionList" class="space-y-2 flex-1 min-h-0 overflow-y-auto pr-1"></div>
+                    <p id="sessionStatus" class="text-[11px] text-[#9CA3AF] mt-3 shrink-0"></p>
+                </div>
+            </nav>
+
+            <!-- Bottom nav -->
+            <div class="px-3 pb-5 border-t border-white/5 pt-3">
+                <ul class="space-y-1">
+                    <li>
+                        <a href="../pages/signout.html" data-auth-menu="signout"
+                            class="hidden flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9CA3AF] hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                            Sign Out
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </aside>
+
+        <!-- ================= MAIN WORKSPACE ================= -->
+        <div class="relative flex flex-col flex-1 h-full overflow-hidden">
+
+            <!-- Header -->
+            <header
+                class="relative z-10 flex items-center justify-between gap-4 px-5 md:px-8 h-16 shrink-0 border-b border-white/5">
+                <div class="flex items-center gap-3 min-w-0">
+                    <button id="mobileMenuBtn" data-mobile-menu-toggle
+                        class="md:hidden text-[#9CA3AF] hover:text-white shrink-0">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <h1 class="text-lg font-bold text-white">Profil Teacher</h1>
+                </div>
+
+                <div class="flex items-center gap-3 md:gap-4">
+                    <div data-navbar-avatar
+                        class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white shrink-0 overflow-hidden">
+                        <a href="./profile.html" data-profile-link="./profile.html" data-login-link="./login.html"
+                            class="w-full h-full flex items-center justify-center">
+                            <img data-navbar-avatar-img src="" alt="User avatar" class="hidden w-full h-full object-cover" />
+                            <span data-navbar-avatar-initials class="">TE</span>
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable content -->
+            <main class="relative z-10 flex-1 overflow-y-auto px-4 md:px-8 py-8">
+                <div class="max-w-6xl mx-auto space-y-9">
+
+                    <!-- Hero profile section -->
+                    <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left animate-fadeUp">
+
+                        <div class="relative shrink-0">
+                            <div class="w-28 h-28 rounded-full p-[3px] bg-gradient-to-br from-purple-500 via-indigo-400 to-purple-500 shadow-lg shadow-purple-900/30">
+                                <img data-profile-avatar src="https://ui-avatars.com/api/?name=Teacher&background=7c3aed&color=fff"
+                                    alt="Avatar pengguna"
+                                    class="w-full h-full rounded-full object-cover border-4 border-workspace" />
+                            </div>
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <h1 data-profile-name class="font-serif-heading text-2xl md:text-3xl font-semibold text-white">Teacher</h1>
+                            <p data-profile-role class="text-xs font-semibold uppercase tracking-wider text-[#6B7280] mt-2">Akun teacher</p>
+                            <div class="flex flex-wrap items-center justify-center sm:justify-start gap-3 mt-5">
+                                <span class="text-sm text-[#9CA3AF]">Akun terautentikasi melalui Supabase</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="bg-card border border-slate-800 rounded-xl p-6 animate-fadeUp">
+                        <div class="flex items-center gap-2 mb-5">
+                            <i data-lucide="user" class="w-4 h-4 text-purple-300"></i>
+                            <h2 class="text-sm font-bold text-white uppercase tracking-wide">Informasi Personal</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">Provider Login</p>
+                                <p data-profile-provider class="text-sm text-[#F3F4F6] mt-1.5">Email</p>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">Email Akun</p>
+                                <p data-profile-email class="text-sm text-[#F3F4F6] mt-1.5 break-all">teacher@contoh.com</p>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">Status Akun</p>
+                                <p data-profile-status class="text-sm text-[#F3F4F6] mt-1.5">Aktif</p>
+                            </div>
+
+                            <div>
+                                <p class="text-[10px] font-semibold uppercase tracking-wider text-[#6B7280]">Informasi Login</p>
+                                <div data-profile-badges class="flex flex-wrap gap-2 mt-2">
+                                    <span class="text-xs font-medium bg-[#202538] text-[#0B2545] px-3 py-1 rounded-full">Email</span>
+                                    <span class="text-xs font-medium bg-[#202538] text-[#0B2545] px-3 py-1 rounded-full">Supabase</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/auth-role.js"></script>
+    <script>
+        window.requireAksarakuRole(['teacher'], './login.html').catch(() => window.location.replace('./login.html'));
+    </script>
+    <script src="../js/auth-sidebar.js"></script>
+    <script src="../js/navbar-profile.js"></script>
+    <script src="../js/mobile-sidebar.js"></script>
+    <script src="../js/admin-sidebar-chat.js"></script>
+    <script src="../js/logout-modal.js"></script>
+</body>
+
+</html>

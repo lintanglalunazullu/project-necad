@@ -1,8 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 python-dotenv
 huggingface_hub
 supabase
 numpy
 pydantic
 openai
+sentence-transformers
+slowapi

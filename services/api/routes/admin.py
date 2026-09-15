@@ -1,18 +1,22 @@
-# services/api/routes/admin.py — Admin dashboard dan manajemen user
+# services/api/routes/admin.py — Admin dashboard, manajemen user, dan AI provider config
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, Header, HTTPException
+from pydantic import BaseModel, Field
 from supabase import Client
 
 from auth import require_admin
-from rag.retrieval import fetch_document_rows, document_summary
+from ai.retrieval import fetch_document_rows, document_summary
+from ai.generation import get_provider_manager
 from utils.helpers import extract_response_parts
 
 logger = logging.getLogger("aksaraku.routes.admin")
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+
+# ======================= HELPERS =======================
 
 def _get_supabase() -> Client:
     from app import supabase
@@ -35,6 +39,8 @@ def _dashboard_activity(rows: list[dict], label: str, name_key: str) -> list[dic
         activities.append({"label": label, "name": str(name)[:120], "timestamp": timestamp})
     return activities
 
+
+# ======================= DASHBOARD =======================
 
 @router.get("/dashboard")
 async def admin_dashboard(authorization: Optional[str] = Header(default=None)):
@@ -106,6 +112,8 @@ async def admin_dashboard(authorization: Optional[str] = Header(default=None)):
     }
 
 
+# ======================= USER MANAGEMENT =======================
+
 @router.delete("/users/{user_id}")
 async def delete_admin_user(user_id: str, authorization: Optional[str] = Header(default=None)):
     """Hapus user — hanya untuk admin."""
@@ -132,3 +140,173 @@ async def delete_admin_user(user_id: str, authorization: Optional[str] = Header(
         logger.warning("Profile deletion after Auth deletion failed: %s", exc)
 
     return {"success": True, "user_id": user_id}
+
+
+# ======================= AI PROVIDER CONFIG =======================
+
+class ProviderUpdateRequest(BaseModel):
+    enabled: Optional[bool] = Field(default=None, description="Aktifkan atau nonaktifkan provider")
+    model: Optional[str] = Field(default=None, description="Model string, misal: gemini-2.0-flash")
+    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0, description="0.0-2.0")
+    max_tokens: Optional[int] = Field(default=None, gt=0, le=8192, description="Batas output token")
+    priority: Optional[int] = Field(default=None, ge=1, le=10, description="Urutan fallback (1=tertinggi)")
+    timeout: Optional[float] = Field(default=None, gt=0, le=120, description="Timeout detik")
+    system_prompt_extra: Optional[str] = Field(default=None, description="Instruksi tambahan khusus provider ini")
+
+
+class ProviderTestRequest(BaseModel):
+    provider: str = Field(description="Nama provider: gemini, groq, openrouter")
+    prompt: Optional[str] = Field(default="Halo, siapa kamu?", description="Prompt test")
+
+
+@router.get("/ai/providers")
+async def list_ai_providers(authorization: Optional[str] = Header(default=None)):
+    """
+    List semua AI provider beserta status, konfigurasi, dan statistik penggunaan.
+    Hanya untuk admin.
+    """
+    require_admin(_get_supabase(), authorization)
+    manager = get_provider_manager()
+    return {
+        "providers": [p.to_dict() for p in manager.get_all_providers()],
+        "active_count": len(manager.get_sorted_providers()),
+    }
+
+
+@router.put("/ai/providers/{provider_name}")
+async def update_ai_provider(
+    provider_name: str,
+    body: ProviderUpdateRequest,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Update konfigurasi satu AI provider secara runtime (tanpa restart server).
+    Perubahan langsung berlaku untuk request berikutnya.
+    Optionally, simpan ke Supabase agar survive restart.
+    Hanya untuk admin.
+    """
+    supabase = _get_supabase()
+    require_admin(supabase, authorization)
+
+    manager = get_provider_manager()
+    updates = {k: v for k, v in body.model_dump().items() if v is not None}
+
+    try:
+        provider = manager.update_provider(provider_name, updates)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc))
+
+    # Simpan ke Supabase kalau tabelnya ada (graceful — tidak error kalau tabel belum dibuat)
+    try:
+        import config
+        db_payload: dict[str, Any] = {"id": provider_name, **updates, "updated_at": "now()"}
+        supabase.table(config.AI_CONFIG_TABLE).upsert(db_payload, on_conflict="id").execute()
+        logger.info("AI provider config '%s' disimpan ke DB", provider_name)
+    except Exception as exc:
+        logger.info("Tidak bisa simpan ke DB (tabel mungkin belum ada): %s", exc)
+
+    return {"success": True, "provider": provider.to_dict()}
+
+
+@router.post("/ai/providers/test")
+async def test_ai_provider(
+    body: ProviderTestRequest,
+    authorization: Optional[str] = Header(default=None),
+):
+    """
+    Test satu provider dengan prompt dummy. Berguna untuk verifikasi API key dan model.
+    Hanya untuk admin.
+    """
+    require_admin(_get_supabase(), authorization)
+
+    manager = get_provider_manager()
+    provider = manager.get_provider(body.provider)
+    if not provider:
+        raise HTTPException(404, f"Provider '{body.provider}' tidak ditemukan")
+
+    if not provider.enabled:
+        raise HTTPException(400, f"Provider '{body.provider}' sedang dinonaktifkan")
+
+    import time
+    start = time.perf_counter()
+    error_msg = None
+    answer = None
+
+    try:
+        from ai.generation import _call_gemini, _call_openai_compat
+        messages = [
+            {"role": "system", "content": "Kamu adalah asisten AI singkat dan informatif."},
+            {"role": "user", "content": body.prompt},
+        ]
+
+        if body.provider == "gemini":
+            answer, usage = _call_gemini(provider, messages)
+        else:
+            clients = manager.get_openai_clients(body.provider)
+            if not clients:
+                raise RuntimeError(f"Tidak ada API key terkonfigurasi untuk {body.provider}")
+            answer, _, usage = _call_openai_compat(provider, clients, messages, 0)
+
+    except Exception as exc:
+        error_msg = str(exc)
+
+    elapsed = round((time.perf_counter() - start) * 1000)
+
+    return {
+        "provider": body.provider,
+        "model": provider.model,
+        "success": error_msg is None,
+        "answer": answer,
+        "error": error_msg,
+        "latency_ms": elapsed,
+    }
+
+
+@router.get("/ai/stats")
+async def ai_provider_stats(authorization: Optional[str] = Header(default=None)):
+    """
+    Statistik penggunaan tiap AI provider (request count, error count, health status).
+    Hanya untuk admin.
+    """
+    require_admin(_get_supabase(), authorization)
+    manager = get_provider_manager()
+    return {
+        "providers": [
+            {
+                "name": p.name,
+                "enabled": p.enabled,
+                "priority": p.priority,
+                "model": p.model,
+                "is_healthy": p.is_healthy,
+                "stats": {
+                    "success_count": p._success_count,
+                    "error_count": p._error_count,
+                    "total_requests": p._total_requests,
+                    "error_rate": round(
+                        p._error_count / max(1, p._total_requests) * 100, 1
+                    ),
+                },
+            }
+            for p in manager.get_all_providers()
+        ]
+    }
+
+
+@router.post("/ai/reload")
+async def reload_ai_config(authorization: Optional[str] = Header(default=None)):
+    """
+    Reload konfigurasi AI provider dari Supabase ke memory.
+    Gunakan setelah manual edit tabel ai_provider_config di Supabase.
+    Hanya untuk admin.
+    """
+    supabase = _get_supabase()
+    require_admin(supabase, authorization)
+
+    manager = get_provider_manager()
+    updated = manager.reload_from_db(supabase)
+
+    return {
+        "success": True,
+        "updated_providers": updated,
+        "providers": [p.to_dict() for p in manager.get_all_providers()],
+    }

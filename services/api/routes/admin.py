@@ -147,6 +147,7 @@ async def delete_admin_user(user_id: str, authorization: Optional[str] = Header(
 class ProviderUpdateRequest(BaseModel):
     enabled: Optional[bool] = Field(default=None, description="Aktifkan atau nonaktifkan provider")
     model: Optional[str] = Field(default=None, description="Model string, misal: gemini-2.0-flash")
+    api_key: Optional[str] = Field(default=None, description="API Key baru untuk provider")
     temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0, description="0.0-2.0")
     max_tokens: Optional[int] = Field(default=None, gt=0, le=8192, description="Batas output token")
     priority: Optional[int] = Field(default=None, ge=1, le=10, description="Urutan fallback (1=tertinggi)")
@@ -156,19 +157,141 @@ class ProviderUpdateRequest(BaseModel):
 
 class ProviderTestRequest(BaseModel):
     provider: str = Field(description="Nama provider: gemini, groq, openrouter")
-    prompt: Optional[str] = Field(default="Halo, siapa kamu?", description="Prompt test")
+    prompt: Optional[str] = Field(default="Sebutkan 1 kalimat motivasi belajar untuk siswa SMP!", description="Prompt test")
+    model: Optional[str] = Field(default=None, description="Model opsional untuk ditest")
+    api_key: Optional[str] = Field(default=None, description="API Key opsional untuk ditest sebelum disimpan")
+
+
+# Katalog model terkurasi dengan klasifikasi Tier (Free vs Pro)
+CURATED_MODELS = [
+    # Gemini
+    {
+        "provider": "gemini",
+        "id": "gemini-2.0-flash",
+        "name": "Gemini 2.0 Flash",
+        "tier": "free",
+        "speed": "Ultra Cepat (~150 t/s)",
+        "context": "1.000.000 tokens",
+        "badge": "Rekomendasi Utama",
+        "desc": "Model generasi terbaru Google: sangat cerdas, responsif, dan gratis di AI Studio.",
+    },
+    {
+        "provider": "gemini",
+        "id": "gemini-1.5-flash",
+        "name": "Gemini 1.5 Flash",
+        "tier": "free",
+        "speed": "Sangat Cepat",
+        "context": "1.000.000 tokens",
+        "badge": "Stabil",
+        "desc": "Sangat stabil untuk pencarian konteks panjang dan tugas tanya jawab materi.",
+    },
+    {
+        "provider": "gemini",
+        "id": "gemini-1.5-pro",
+        "name": "Gemini 1.5 Pro",
+        "tier": "pro",
+        "speed": "Sedang",
+        "context": "2.000.000 tokens",
+        "badge": "High Reasoning",
+        "desc": "Model reasoning tertinggi dari Google untuk penalaran analitis mendalam.",
+    },
+    # Groq
+    {
+        "provider": "groq",
+        "id": "llama-3.3-70b-versatile",
+        "name": "Llama 3.3 70B Versatile",
+        "tier": "free",
+        "speed": "Super Kilat (~300 t/s)",
+        "context": "128.000 tokens",
+        "badge": "Rekomendasi Groq",
+        "desc": "Inferensi hardware LPU Groq tercepat di dunia. Sangat akurat untuk bahasa Indonesia.",
+    },
+    {
+        "provider": "groq",
+        "id": "deepseek-r1-distill-llama-70b",
+        "name": "DeepSeek R1 Distill 70B",
+        "tier": "free",
+        "speed": "Cepat (~250 t/s)",
+        "context": "128.000 tokens",
+        "badge": "Penalaran Sains/MTK",
+        "desc": "Distilasi model DeepSeek R1 dengan kemampuan *step-by-step reasoning* superior.",
+    },
+    {
+        "provider": "groq",
+        "id": "mixtral-8x7b-32768",
+        "name": "Mixtral 8x7B",
+        "tier": "free",
+        "speed": "Sangat Cepat",
+        "context": "32.768 tokens",
+        "badge": "MoE Klasik",
+        "desc": "Arsitektur Mixture of Experts yang handal untuk tugas bahasa umum.",
+    },
+    # OpenRouter
+    {
+        "provider": "openrouter",
+        "id": "meta-llama/llama-3.3-70b-instruct:free",
+        "name": "Llama 3.3 70B (Free)",
+        "tier": "free",
+        "speed": "Cepat",
+        "context": "128.000 tokens",
+        "badge": "Free Tier",
+        "desc": "Model 70B gratis via OpenRouter tanpa biaya token.",
+    },
+    {
+        "provider": "openrouter",
+        "id": "google/gemini-2.0-flash-exp:free",
+        "name": "Gemini 2.0 Flash Exp (Free)",
+        "tier": "free",
+        "speed": "Cepat",
+        "context": "1.000.000 tokens",
+        "badge": "Free Tier",
+        "desc": "Akses Gemini experimental tanpa biaya via OpenRouter.",
+    },
+    {
+        "provider": "openrouter",
+        "id": "deepseek/deepseek-r1:free",
+        "name": "DeepSeek R1 (Free)",
+        "tier": "free",
+        "speed": "Normal",
+        "context": "64.000 tokens",
+        "badge": "Free Reasoning",
+        "desc": "Model penalaran DeepSeek R1 penuh secara gratis.",
+    },
+    {
+        "provider": "openrouter",
+        "id": "anthropic/claude-3.5-sonnet",
+        "name": "Claude 3.5 Sonnet",
+        "tier": "pro",
+        "speed": "Kualitas Terbaik",
+        "context": "200.000 tokens",
+        "badge": "Premium / Pro",
+        "desc": "Model kecerdasan bahasa dan instruksi terbaik di dunia (memerlukan kredit berbayar).",
+    },
+]
+
+
+@router.get("/ai/models")
+async def list_curated_models(authorization: Optional[str] = Header(default=None)):
+    """Katalog model AI terkurasi dengan metadata tier (Free vs Pro)."""
+    require_admin(_get_supabase(), authorization)
+    return {"models": CURATED_MODELS}
 
 
 @router.get("/ai/providers")
 async def list_ai_providers(authorization: Optional[str] = Header(default=None)):
-    """
-    List semua AI provider beserta status, konfigurasi, dan statistik penggunaan.
-    Hanya untuk admin.
-    """
+    """List semua AI provider beserta status, konfigurasi, masking key, dan statistik penggunaan."""
     require_admin(_get_supabase(), authorization)
     manager = get_provider_manager()
+
+    providers_data = []
+    for p in manager.get_all_providers():
+        data = p.to_dict()
+        data["has_api_key"] = manager.has_api_key(p.name)
+        data["masked_api_key"] = manager.get_masked_key(p.name)
+        providers_data.append(data)
+
     return {
-        "providers": [p.to_dict() for p in manager.get_all_providers()],
+        "providers": providers_data,
         "active_count": len(manager.get_sorted_providers()),
     }
 
@@ -179,12 +302,7 @@ async def update_ai_provider(
     body: ProviderUpdateRequest,
     authorization: Optional[str] = Header(default=None),
 ):
-    """
-    Update konfigurasi satu AI provider secara runtime (tanpa restart server).
-    Perubahan langsung berlaku untuk request berikutnya.
-    Optionally, simpan ke Supabase agar survive restart.
-    Hanya untuk admin.
-    """
+    """Update konfigurasi satu AI provider secara runtime (tanpa restart server)."""
     supabase = _get_supabase()
     require_admin(supabase, authorization)
 
@@ -196,16 +314,24 @@ async def update_ai_provider(
     except ValueError as exc:
         raise HTTPException(404, str(exc))
 
-    # Simpan ke Supabase kalau tabelnya ada (graceful — tidak error kalau tabel belum dibuat)
+    # Simpan ke Supabase kalau tabelnya ada
     try:
         import config
-        db_payload: dict[str, Any] = {"id": provider_name, **updates, "updated_at": "now()"}
+        # Jangan simpan key jika berupa masked
+        save_updates = dict(updates)
+        if "api_key" in save_updates and (not save_updates["api_key"] or save_updates["api_key"].startswith("••••")):
+            save_updates.pop("api_key", None)
+
+        db_payload: dict[str, Any] = {"id": provider_name, **save_updates, "updated_at": "now()"}
         supabase.table(config.AI_CONFIG_TABLE).upsert(db_payload, on_conflict="id").execute()
         logger.info("AI provider config '%s' disimpan ke DB", provider_name)
     except Exception as exc:
         logger.info("Tidak bisa simpan ke DB (tabel mungkin belum ada): %s", exc)
 
-    return {"success": True, "provider": provider.to_dict()}
+    data = provider.to_dict()
+    data["has_api_key"] = manager.has_api_key(provider.name)
+    data["masked_api_key"] = manager.get_masked_key(provider.name)
+    return {"success": True, "provider": data}
 
 
 @router.post("/ai/providers/test")
@@ -213,53 +339,99 @@ async def test_ai_provider(
     body: ProviderTestRequest,
     authorization: Optional[str] = Header(default=None),
 ):
-    """
-    Test satu provider dengan prompt dummy. Berguna untuk verifikasi API key dan model.
-    Hanya untuk admin.
-    """
+    """Test satu provider dengan prompt dummy atau key sementara. Mengukur latency dan token usage."""
     require_admin(_get_supabase(), authorization)
 
     manager = get_provider_manager()
     provider = manager.get_provider(body.provider)
     if not provider:
-        raise HTTPException(404, f"Provider '{body.provider}' tidak ditemukan")
+        # Jika belum terdaftar, buat objek sementara
+        from ai.generation import ProviderConfig
+        provider = ProviderConfig(
+            name=body.provider,
+            enabled=True,
+            priority=1,
+            model=body.model or "gemini-2.0-flash",
+        )
 
-    if not provider.enabled:
-        raise HTTPException(400, f"Provider '{body.provider}' sedang dinonaktifkan")
-
+    test_model = body.model or provider.model
     import time
     start = time.perf_counter()
     error_msg = None
     answer = None
+    tokens_used = None
 
     try:
-        from ai.generation import _call_gemini, _call_openai_compat
         messages = [
-            {"role": "system", "content": "Kamu adalah asisten AI singkat dan informatif."},
-            {"role": "user", "content": body.prompt},
+            {"role": "system", "content": "Kamu adalah asisten penguji AI yang ramah, ringkas, dan jelas."},
+            {"role": "user", "content": body.prompt or "Halo! Tes koneksi model AI."},
         ]
 
         if body.provider == "gemini":
-            answer, usage = _call_gemini(provider, messages)
+            from ai.generation import _call_gemini, ProviderConfig
+            # Buat konfigurasi test
+            temp_p = ProviderConfig(
+                name="gemini",
+                enabled=True,
+                model=test_model,
+                temperature=0.2,
+                max_tokens=200,
+                timeout=20.0,
+            )
+            # Jika user memberikan key uji
+            if body.api_key and not body.api_key.startswith("••••"):
+                import google.generativeai as genai
+                genai.configure(api_key=body.api_key.strip())
+
+            answer, usage = _call_gemini(temp_p, messages)
+            tokens_used = usage
+
         else:
-            clients = manager.get_openai_clients(body.provider)
-            if not clients:
-                raise RuntimeError(f"Tidak ada API key terkonfigurasi untuk {body.provider}")
-            answer, _, usage = _call_openai_compat(provider, clients, messages, 0)
+            from ai.generation import _call_openai_compat, ProviderConfig
+            from openai import OpenAI
+            import config
+
+            temp_p = ProviderConfig(
+                name=body.provider,
+                enabled=True,
+                model=test_model,
+                temperature=0.2,
+                max_tokens=200,
+                timeout=20.0,
+            )
+
+            # Tentukan client untuk test
+            if body.api_key and not body.api_key.startswith("••••"):
+                base_url = "https://api.groq.com/openai/v1" if body.provider == "groq" else "https://openrouter.ai/api/v1"
+                headers = {}
+                if body.provider == "openrouter":
+                    headers = {"HTTP-Referer": config.OPENROUTER_SITE_URL, "X-Title": config.OPENROUTER_SITE_NAME}
+                test_clients = [(f"{body.provider}_test", OpenAI(api_key=body.api_key.strip(), base_url=base_url, max_retries=0, timeout=20.0, default_headers=headers))]
+            else:
+                test_clients = manager.get_openai_clients(body.provider)
+
+            if not test_clients:
+                raise RuntimeError(f"Tidak ada API Key yang dikonfigurasi untuk provider {body.provider}")
+
+            answer, _, usage = _call_openai_compat(temp_p, test_clients, messages, 0)
+            tokens_used = usage
 
     except Exception as exc:
         error_msg = str(exc)
 
-    elapsed = round((time.perf_counter() - start) * 1000)
+    elapsed = round((time.perf_counter() - start) * 1000, 1)
 
     return {
         "provider": body.provider,
-        "model": provider.model,
+        "model": test_model,
         "success": error_msg is None,
         "answer": answer,
         "error": error_msg,
         "latency_ms": elapsed,
+        "tokens": tokens_used,
+        "message": "Koneksi berhasil dan API Key valid!" if error_msg is None else "Koneksi gagal atau API Key tidak valid.",
     }
+
 
 
 @router.get("/ai/stats")

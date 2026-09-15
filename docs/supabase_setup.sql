@@ -96,6 +96,7 @@ ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS max_tokens INT NO
 ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS priority INT NOT NULL DEFAULT 1;
 ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS timeout FLOAT NOT NULL DEFAULT 30.0;
 ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS system_prompt_extra TEXT DEFAULT '';
+ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS api_key TEXT DEFAULT '';
 ALTER TABLE public.ai_provider_config ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
 
 -- 5. Tabel PDF Documents (Knowledge Base RAG & Vector Embeddings)

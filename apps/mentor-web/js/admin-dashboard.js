@@ -189,6 +189,40 @@
       renderDocuments(result.documents || []);
       renderRecentUsers(result.recent_users || []);
 
+      // Muat status AI Engine & Provider
+      try {
+        const aiResponse = await fetch(`${window.AKSARAKU_CONFIG.API_BASE_URL}/admin/ai/providers`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (aiResponse.ok) {
+          const aiData = await aiResponse.json();
+          const activeProviders = (aiData.providers || [])
+            .filter((p) => p.enabled)
+            .sort((a, b) => a.priority - b.priority);
+
+          if (activeProviders.length > 0) {
+            const primary = activeProviders[0];
+            setText('dashActiveModel', `${primary.name.toUpperCase()} (${primary.model})`);
+            setText('dashFallbackChain', activeProviders.map((p) => p.name.toUpperCase()).join(' → '));
+
+            const badge = document.getElementById('dashAiStatusBadge');
+            if (badge) {
+              if (primary.has_api_key) {
+                badge.textContent = 'Online & Active';
+                badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30';
+              } else {
+                badge.textContent = 'Perlu API Key';
+                badge.className = 'text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 font-semibold border border-amber-500/30';
+              }
+            }
+          }
+        }
+      } catch (aiErr) {
+        console.warn('Gagal memuat status AI provider di dashboard:', aiErr);
+      }
+
+      if (window.lucide) window.lucide.createIcons();
+
       loading?.classList.add('hidden');
       content?.classList.remove('hidden');
     } catch (loadError) {

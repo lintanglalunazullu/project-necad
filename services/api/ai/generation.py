@@ -227,22 +227,116 @@ class AIProviderManager:
                     p.priority = int(row["priority"])
                 if row.get("system_prompt_extra") is not None:
                     p.system_prompt_extra = str(row["system_prompt_extra"])
+                # Reload API Key dari DB jika ada dan valid
+                db_key = str(row.get("api_key") or "").strip()
+                if db_key and not db_key.startswith("••••") and not db_key.startswith("AIzaSy_xxx"):
+                    self._apply_api_key(name, db_key)
                 updated += 1
 
         logger.info("Reload dari DB: %s provider diupdate", updated)
         return updated
 
+    def _apply_api_key(self, name: str, key: str) -> None:
+        """Helper internal untuk memasang API Key baru ke SDK client."""
+        key = key.strip()
+        if not key or key.startswith("••••"):
+            return
+
+        if name == "gemini":
+            config.GEMINI_API_KEY = key
+            try:
+                genai.configure(api_key=key)
+                logger.info("Gemini API key berhasil diperbarui secara runtime")
+            except Exception as e:
+                logger.error("Gagal configure Gemini API key: %s", e)
+
+        elif name == "groq":
+            config.GROQ_API_KEYS = [key]
+            self._openai_clients["groq"] = [(
+                "groq_1",
+                OpenAI(
+                    api_key=key,
+                    base_url="https://api.groq.com/openai/v1",
+                    max_retries=0,
+                    timeout=25.0,
+                ),
+            )]
+            logger.info("Groq client berhasil diperbarui dengan API key baru")
+
+        elif name == "openrouter":
+            config.OPENROUTER_API_KEYS = [key]
+            self._openai_clients["openrouter"] = [(
+                "openrouter_1",
+                OpenAI(
+                    api_key=key,
+                    base_url="https://openrouter.ai/api/v1",
+                    max_retries=0,
+                    timeout=40.0,
+                    default_headers={
+                        "HTTP-Referer": config.OPENROUTER_SITE_URL,
+                        "X-Title": config.OPENROUTER_SITE_NAME,
+                    },
+                ),
+            )]
+            logger.info("OpenRouter client berhasil diperbarui dengan API key baru")
+
     def update_provider(self, name: str, updates: dict) -> ProviderConfig:
-        """Update config satu provider. Dipanggil dari admin endpoint."""
+        """Update config satu provider termasuk API key secara runtime. Dipanggil dari admin endpoint."""
         with self._rw_lock:
+            # Jika provider belum terdaftar di instance, buat default-nya
             if name not in self._providers:
-                raise ValueError(f"Provider '{name}' tidak ditemukan")
+                default_models = {
+                    "gemini": config.GEMINI_CHAT_MODEL or "gemini-2.0-flash",
+                    "groq": config.GROQ_CHAT_MODEL or "llama-3.3-70b-versatile",
+                    "openrouter": config.OPENROUTER_CHAT_MODEL or "meta-llama/llama-3.3-70b-instruct:free",
+                }
+                default_priorities = {"gemini": 1, "groq": 2, "openrouter": 3}
+                self._providers[name] = ProviderConfig(
+                    name=name,
+                    enabled=True,
+                    priority=default_priorities.get(name, 5),
+                    model=default_models.get(name, ""),
+                    temperature=0.2,
+                    max_tokens=config.MAX_OUTPUT_TOKENS,
+                    timeout=30.0,
+                )
+
             p = self._providers[name]
+
+            # Pasang API Key jika diberikan
+            new_key = updates.get("api_key")
+            if new_key and isinstance(new_key, str) and not new_key.startswith("••••"):
+                self._apply_api_key(name, new_key)
+
             allowed = {"enabled", "model", "temperature", "max_tokens", "priority", "timeout", "system_prompt_extra"}
             for key, val in updates.items():
                 if key in allowed and val is not None:
                     setattr(p, key, val)
             return p
+
+    def has_api_key(self, name: str) -> bool:
+        """Cek apakah provider memiliki API key aktif."""
+        with self._rw_lock:
+            if name == "gemini":
+                return bool(config.GEMINI_API_KEY and not config.GEMINI_API_KEY.startswith("AIzaSy_xxx"))
+            return bool(self._openai_clients.get(name))
+
+    def get_masked_key(self, name: str) -> str:
+        """Kembalikan versi masked dari API key untuk keamanan UI."""
+        with self._rw_lock:
+            raw_key = ""
+            if name == "gemini":
+                raw_key = config.GEMINI_API_KEY
+            elif name == "groq" and config.GROQ_API_KEYS:
+                raw_key = config.GROQ_API_KEYS[0]
+            elif name == "openrouter" and config.OPENROUTER_API_KEYS:
+                raw_key = config.OPENROUTER_API_KEYS[0]
+
+            if not raw_key or raw_key.startswith("AIzaSy_xxx") or raw_key.startswith("gsk_xxx") or raw_key.startswith("sk-or-xxx"):
+                return ""
+            if len(raw_key) <= 8:
+                return "••••••••"
+            return f"{raw_key[:5]}••••••••{raw_key[-4:]}"
 
     def get_sorted_providers(self) -> list[ProviderConfig]:
         """Kembalikan provider aktif dan sehat, diurutkan berdasarkan priority."""

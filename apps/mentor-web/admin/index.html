@@ -123,6 +123,13 @@
                         </a>
                     </li>
                     <li>
+                        <a href="./ai-config.html"
+                            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9CA3AF] hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
+                            <i data-lucide="cpu" class="w-4 h-4 text-purple-400"></i>
+                            Konfigurasi AI
+                        </a>
+                    </li>
+                    <li>
                         <a href="./upload.html"
                             class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-[#9CA3AF] hover:bg-white/5 hover:text-white transition-colors text-sm font-medium">
                             <i data-lucide="file-up" class="w-4 h-4"></i>
@@ -223,6 +230,29 @@
                             <p class="text-sm text-[#9CA3AF] mt-1.5">
                                 Berikut ringkasan aktivitas Aksaraku.
                             </p>
+                        </div>
+
+                        <!-- AI Engine Live Status Widget -->
+                        <div class="rounded-xl border border-white/10 bg-gradient-to-r from-purple-950/30 via-slate-900/40 to-slate-900/60 p-4 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                                    <i data-lucide="bot" class="w-5 h-5"></i>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-bold text-white tracking-wide">AI ENGINE STATUS</span>
+                                        <span id="dashAiStatusBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 font-semibold border border-emerald-500/30">Online</span>
+                                    </div>
+                                    <p class="text-xs text-[#9CA3AF] mt-0.5">
+                                        Model Aktif: <span id="dashActiveModel" class="font-mono text-purple-300 font-semibold">gemini-2.0-flash</span> •
+                                        Fallback: <span id="dashFallbackChain" class="font-mono text-slate-300">Gemini → Groq → OpenRouter</span>
+                                    </p>
+                                </div>
+                            </div>
+                            <a href="./ai-config.html" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-purple-500/30 bg-purple-500/10 hover:bg-purple-500/20 text-xs font-semibold text-purple-300 transition-colors shrink-0">
+                                <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                                Kelola AI Engine &amp; API Key
+                            </a>
                         </div>
 
                         <!-- Primary stat cards -->

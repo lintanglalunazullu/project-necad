@@ -1,5 +1,5 @@
 # services/api/routes/documents.py — CRUD dokumen knowledge base
-# ⚠️  SECURITY FIX: semua endpoint kini memerlukan autentikasi role teacher/admin
+# Semua endpoint memerlukan autentikasi role teacher/admin
 import logging
 from typing import Optional
 
@@ -8,8 +8,8 @@ from supabase import Client
 
 from auth import authenticated_user
 from models import DocumentRenameRequest, EmbedUpsertRequest
-from rag.embedding import embed_text, validate_embedding
-from rag.retrieval import fetch_document_rows, document_summary
+from ai.embedding import embed_text, validate_embedding
+from ai.retrieval import fetch_document_rows, document_summary
 from utils.helpers import extract_response_parts
 import config
 
@@ -118,7 +118,7 @@ async def embed_upsert(
 ):
     """
     Upload chunk teks dan generate embedding — hanya admin dan teacher.
-    (Security fix: endpoint ini sebelumnya tidak ada auth sama sekali)
+    Embedding dibuat via Gemini text-embedding-004.
     """
     supabase = _get_supabase()
     _, role = authenticated_user(supabase, authorization)
@@ -160,7 +160,6 @@ async def embed_upsert_raw(
 ):
     """
     Upload chunk dengan embedding yang sudah dihitung — hanya admin dan teacher.
-    (Security fix: endpoint ini sebelumnya tidak ada auth sama sekali)
     """
     supabase = _get_supabase()
     _, role = authenticated_user(supabase, authorization)

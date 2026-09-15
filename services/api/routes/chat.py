@@ -10,8 +10,8 @@ from supabase import Client
 import config
 from auth import authenticated_role, chat_role, filter_documents_for_role
 from models import QueryRequest
-from rag.embedding import embed_text
-from rag.generation import (
+from ai.embedding import embed_query
+from ai.generation import (
     SYSTEM_PROMPT,
     answer_claims_no_information,
     calculate_evidence_confidence,
@@ -21,8 +21,8 @@ from rag.generation import (
     public_sources,
     render_documents_raw,
 )
-from rag.retrieval import get_similar_documents, is_structured_question, rerank_documents
-from rag.session import build_search_query, ensure_session, get_session_history, save_message
+from ai.retrieval import get_similar_documents, is_structured_question, rerank_documents
+from ai.session import build_search_query, ensure_session, get_session_history, save_message
 from utils.helpers import estimate_tokens
 
 logger = logging.getLogger("aksaraku.routes.chat")
@@ -61,7 +61,7 @@ async def query_docs(request: Request, body: QueryRequest, authorization: Option
     if not question:
         raise HTTPException(400, "question is required")
 
-    question_embedding = embed_text(question)
+    question_embedding = embed_query(question)
     retrieved = get_similar_documents(supabase, question_embedding, role, config.RAG_TOP_K, question)
     docs = rerank_documents(question, filter_documents_for_role(retrieved, role), config.RAG_FINAL_K)
     return {"data": public_sources(docs)}
@@ -92,7 +92,7 @@ async def chat(request: Request, body: QueryRequest, authorization: Optional[str
 
     # ========= DOCUMENT INVENTORY SHORTCUT =========
     if _is_document_inventory_question(question):
-        from rag.retrieval import document_summary, fetch_document_rows
+        from ai.retrieval import document_summary, fetch_document_rows
         inventory = filter_documents_for_role(document_summary(fetch_document_rows(supabase)), role)
         docs = [
             {**doc, "content": f"Dokumen: {doc['pdf_name']}; jumlah chunk: {doc['chunk_count']}", "similarity": 1.0}
@@ -110,7 +110,7 @@ async def chat(request: Request, body: QueryRequest, authorization: Optional[str
 
     # ========= NORMAL RAG SEARCH =========
     else:
-        search_embedding = embed_text(search_query)
+        search_embedding = embed_query(search_query)
         retrieved = get_similar_documents(supabase, search_embedding, role, config.RAG_TOP_K, search_query)
         accessible_documents = filter_documents_for_role(retrieved, role)
         docs = rerank_documents(search_query, accessible_documents, config.RAG_FINAL_K)

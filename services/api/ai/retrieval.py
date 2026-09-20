@@ -249,36 +249,180 @@ def _rpc_vector_search(
         return [], False
 
 
+SLANG_MAP = {
+    "walas": "wali kelas",
+    "wali kls": "wali kelas",
+    "kepsek": "kepala sekolah",
+    "wakasek": "wakil kepala sekolah",
+    "eskul": "ekstrakurikuler",
+    "ekskul": "ekstrakurikuler",
+    "sarpras": "sarana prasarana",
+    "telp": "telepon",
+    "tlp": "telepon",
+    "hp": "telepon",
+    "handphone": "telepon",
+    "kontak": "telepon",
+    "nohp": "nomor telepon",
+    "no": "nomor",
+    "mapel": "mata pelajaran",
+    "mtk": "matematika",
+    "penjas": "pjok",
+    "penjaskes": "pjok",
+    "olahraga": "pjok",
+    "solat": "shalat",
+    "sholat": "shalat",
+    "dzuhur": "dhuhur",
+    "zuhur": "dhuhur",
+    "ashar": "ashar",
+    "asar": "ashar",
+    "sklh": "sekolah",
+    "skolah": "sekolah",
+    "sekola": "sekolah",
+    "latian": "latihan",
+    "dihukum": "sanksi",
+    "hukuman": "sanksi",
+    "brp": "berapa",
+    "berpa": "berapa",
+    "piro": "berapa",
+    "sp": "siapa",
+    "syp": "siapa",
+    "sapaeh": "siapa",
+    "kpn": "kapan",
+    "dmn": "dimana",
+    "dimn": "dimana",
+    "gmn": "bagaimana",
+    "gimana": "bagaimana",
+    "knp": "mengapa",
+    "napa": "mengapa",
+    "kenape": "mengapa",
+    "klo": "kalau",
+    "kl": "kalau",
+    "kalo": "kalau",
+    "krn": "karena",
+    "karna": "karena",
+    "bwt": "untuk",
+    "utk": "untuk",
+    "dgn": "dengan",
+    "dr": "dari",
+    "tp": "tetapi",
+    "tpi": "tetapi",
+    "yg": "yang",
+    "udh": "sudah",
+    "udah": "sudah",
+    "sdh": "sudah",
+    "blm": "belum",
+    "lom": "belum",
+    "ga": "tidak",
+    "gak": "tidak",
+    "nggak": "tidak",
+    "ngga": "tidak",
+    "engga": "tidak",
+    "kagak": "tidak",
+    "bgt": "sangat",
+    "banget": "sangat",
+    "tau": "tahu",
+    "tw": "tahu",
+    "info": "informasi",
+    "inpo": "informasi",
+    "sy": "saya",
+    "gw": "saya",
+    "gue": "saya",
+    "gua": "saya",
+    "lu": "kamu",
+    "lo": "kamu",
+    "loe": "kamu",
+    "skrg": "sekarang",
+    "tu": "",
+    "tuh": "",
+}
+
+CHAT_FILLERS = {
+    "si", "sih", "aja", "ajah", "doang", "lah", "kah", "pun", "deh", "dong", "dunk",
+    "nih", "kan", "ya", "yah", "woy", "rek", "min", "admin", "bang", "kak", "pak", "bu",
+    "om", "tante", "gan", "coy", "bray", "ges", "guys", "beneran", "dah", "bro", "sis",
+    "disini", "situ", "sini", "kok", "loh", "lho", "toh"
+}
+
 ID_STOPWORDS = {
     "apa", "apakah", "siapa", "siapakah", "bagaimana", "bagaimanakah", "mengapa", "kenapa", "kapan",
     "dimana", "dimanakah", "mana", "yang", "dan", "di", "ke", "dari", "pada", "untuk", "dengan",
     "ini", "itu", "atau", "adalah", "yaitu", "sebagai", "bisa", "dapat", "ada",
     "saya", "kamu", "anda", "kami", "kita", "mereka", "dia", "nya", "tolong",
     "coba", "jelaskan", "sebutkan", "tentang", "kasih", "tahu", "beri", "detail", "detailnya",
-    "berapa", "berapakah", "nomor", "no", "jumlah", "total", "sekolah"
+    "berapa", "berapakah", "nomor", "no", "jumlah", "total", "sekolah",
+    # Chat fillers, slang particles, conversational noise
+    "si", "sih", "aja", "ajah", "doang", "lah", "kah", "pun", "deh", "dong", "dunk", "nih",
+    "tuh", "tu", "kan", "ya", "yah", "toh", "kok", "loh", "lho", "woy", "rek", "min", "admin",
+    "bang", "kak", "pak", "bu", "om", "tante", "gan", "coy", "bray", "ges", "guys", "beneran",
+    "dah", "bro", "sis", "disini", "situ", "sini", "klo", "kl", "kalo", "krn", "karna", "bwt",
+    "utk", "dgn", "dr", "tp", "tpi", "yg", "udh", "udah", "sdh", "blm", "lom", "ga", "gak",
+    "nggak", "ngga", "engga", "kagak", "bgt", "banget", "tau", "tw", "sp", "syp", "brp",
+    "kpn", "dmn", "gmn", "knp", "sy", "aku", "gw", "gue", "gua", "lu", "lo", "loe", "skrg"
 }
 
-SYNONYMS = {
-    "eskul": "ekstrakurikuler",
-    "ekskul": "ekstrakurikuler",
-    "walas": "wali kelas",
-    "kepsek": "kepala sekolah",
-    "wakasek": "wakil kepala sekolah",
-    "tu": "tata usaha",
-    "sarpras": "sarana prasarana",
-    "telp": "telepon",
-    "hp": "telepon",
-    "handphone": "telepon",
-    "kontak": "telepon",
-}
+SYNONYMS = SLANG_MAP
 
 KEY_ENTITIES = [
     "luas tanah", "luas bangunan", "kepala sekolah", "wali kelas",
     "tata tertib", "kalender pendidikan", "ekstrakurikuler", "jadwal",
     "npsn", "nss", "nisn", "nip", "kkm", "visi", "misi",
     "telepon", "telp", "pramuka", "osis", "paskibra", "pmr", "akreditasi",
-    "semester", "libur", "anbk", "pts", "pas", "pat", "kisi-kisi"
+    "semester", "libur", "anbk", "pts", "pas", "pat", "kisi-kisi",
+    "eskul", "ekskul", "walas", "kepsek", "guru ipa", "guru mtk", "guru pjok",
+    "bahasa sunda", "jadwal ekstrakurikuler", "toilet", "lab komputer"
 ]
+
+ROMAN_MAP = {"7": "VII", "8": "VIII", "9": "IX"}
+REV_ROMAN_MAP = {"vii": "7", "viii": "8", "ix": "9"}
+
+
+def extract_class_tokens(text: str) -> list[str]:
+    """Ekstrak variasi kelas (7.1, 7-1, VII-1, VII.1) baik Romawi maupun Arab."""
+    results = []
+    t_lower = text.lower()
+    # Format numerik: 7.1, 7-1, 7 1, 8.4, 9.5, dst.
+    m_num = re.search(r"\b([789])[\.\-\s_](\d{1,2})\b", t_lower)
+    if m_num:
+        grade, num = m_num.group(1), m_num.group(2)
+        rom = ROMAN_MAP.get(grade, grade)
+        results.extend([
+            f"{rom}-{num}",
+            f"{rom}.{num}",
+            f"{grade}.{num}",
+            f"{grade}-{num}",
+            f"kelas {rom}-{num}",
+            f"kelas {grade}.{num}",
+        ])
+    # Format romawi: VII-1, IX-5, dst.
+    m_rom = re.search(r"\b(vii|viii|ix)[\.\-\s_](\d{1,2})\b", t_lower)
+    if m_rom:
+        rom_str, num = m_rom.group(1), m_rom.group(2)
+        grade = REV_ROMAN_MAP.get(rom_str, rom_str)
+        rom_upper = rom_str.upper()
+        results.extend([
+            f"{rom_upper}-{num}",
+            f"{rom_upper}.{num}",
+            f"{grade}.{num}",
+            f"{grade}-{num}",
+            f"kelas {rom_upper}-{num}",
+            f"kelas {grade}.{num}",
+        ])
+    return list(dict.fromkeys(results))
+
+
+def normalize_informal_query(query: str) -> str:
+    """Normalisasi pertanyaan gaul / informal menjadi teks pencarian semantik bersih."""
+    if not query:
+        return ""
+    cleaned = re.sub(r"[\?\!\.,;:]+", " ", query.lower()).strip()
+    words_list = cleaned.split()
+    mapped = []
+    for w in words_list:
+        w_clean = SLANG_MAP.get(w, w)
+        if w_clean and w_clean not in CHAT_FILLERS:
+            mapped.append(w_clean)
+    res = " ".join(mapped).strip()
+    return res or query
 
 
 def _strip_id_affixes(word: str) -> str:
@@ -291,21 +435,36 @@ def _strip_id_affixes(word: str) -> str:
 
 
 def _extract_search_candidates(query: str) -> list[str]:
-    """Ekstrak beberapa kombinasi kata kunci bertingkat dari pertanyaan dengan prioritas entitas."""
+    """Ekstrak beberapa kombinasi kata kunci bertingkat dari pertanyaan dengan prioritas entitas dan kelas."""
     ql = query.lower()
     candidates: list[str] = []
 
-    # 1. Deteksi entitas kunci (akronim & frase substantif sekolah)
+    # 1. Deteksi nomor kelas (Arab & Romawi: 9.5 <-> IX-5)
+    class_tokens = extract_class_tokens(query)
+    for ct in class_tokens:
+        candidates.append(ct)
+        if "walas" in ql or "wali" in ql:
+            candidates.append(f"wali kelas {ct}")
+
+    # 2. Deteksi entitas kunci sekolah
     for ent in KEY_ENTITIES:
         if ent in ql:
-            candidates.append(ent)
+            canonical_ent = SLANG_MAP.get(ent, ent)
+            candidates.append(canonical_ent)
             if ent in ("telepon", "telp"):
                 candidates.extend(["telp", "telepon"])
+            elif ent in ("eskul", "ekskul", "ekstrakurikuler"):
+                candidates.extend(["ekstrakurikuler", "ekskul"])
 
-    # 2. Tokenisasi kata & pemetaan sinonim
+    # 3. Query normalisasi (slang diganti, filler dibersihkan)
+    normalized = normalize_informal_query(query)
+    if normalized and normalized != ql:
+        candidates.append(normalized)
+
+    # 4. Tokenisasi kata & pemetaan kata bermakna
     tokens = re.findall(r"[a-zA-Z0-9]+", ql)
-    mapped_tokens = [SYNONYMS.get(t, t) for t in tokens]
-    meaningful = [t for t in mapped_tokens if t not in ID_STOPWORDS]
+    mapped_tokens = [SLANG_MAP.get(t, t) for t in tokens if t]
+    meaningful = [t for t in mapped_tokens if t and t not in ID_STOPWORDS]
     stemmed = [_strip_id_affixes(t) for t in meaningful]
 
     if meaningful:
@@ -345,10 +504,10 @@ def _rpc_keyword_search(
         except Exception as exc:
             logger.warning("Keyword RPC failed for query '%s': %s", q_text, exc)
 
-    # Fallback pencarian langsung (ILIKE) untuk entitas kunci jika RPC mengembalikan 0 hasil
-    for cand in queries[:4]:
+    # Fallback pencarian langsung (ILIKE) untuk entitas kunci & kelas jika RPC mengembalikan 0 hasil
+    for cand in queries[:6]:
         cand_clean = cand.strip()
-        if len(cand_clean) >= 3 and cand_clean not in ID_STOPWORDS:
+        if len(cand_clean) >= 2 and cand_clean not in ID_STOPWORDS:
             try:
                 qb = supabase.table(config.SUPABASE_TABLE).select("id, pdf_name, category, content")
                 if categories:
@@ -363,6 +522,7 @@ def _rpc_keyword_search(
                 logger.debug("ILIKE fallback search skipped: %s", exc)
 
     return []
+
 
 
 # ======================= MAIN RETRIEVAL =======================
@@ -466,19 +626,19 @@ THEMATIC_CATEGORIES = {
         "filenames": ["ppdb", "pendaftaran", "siswa_baru"],
     },
     "akademik": {
-        "keywords": ["kurikulum", "jadwal", "pelajaran", "mapel", "ujian", "pts", "pas", "pat", "rapor", "kelulusan", "kalender", "semester", "kkm", "asesmen", "anbk", "libur", "kisi-kisi"],
+        "keywords": ["kurikulum", "jadwal", "pelajaran", "mapel", "ujian", "pts", "pas", "pat", "rapor", "kelulusan", "kalender", "semester", "kkm", "asesmen", "anbk", "libur", "kisi-kisi", "mtk", "matematika", "penjas", "pjok", "olahraga"],
         "filenames": ["kurikulum", "akademik", "jadwal", "kalender", "pedoman"],
     },
     "profil": {
-        "keywords": ["visi", "misi", "sejarah", "kepala sekolah", "profil", "alamat", "kontak", "fasilitas", "sarana", "prasarana", "akreditasi", "npsn", "nss", "ruang", "gedung", "lapangan", "perpustakaan", "lab", "laboratorium", "tanah", "luas tanah", "luas bangunan", "telepon", "telp"],
+        "keywords": ["visi", "misi", "sejarah", "kepala sekolah", "profil", "alamat", "kontak", "fasilitas", "sarana", "prasarana", "akreditasi", "npsn", "nss", "ruang", "gedung", "lapangan", "perpustakaan", "lab", "laboratorium", "tanah", "luas tanah", "luas bangunan", "telepon", "telp", "wa", "nohp", "nomor hp", "kepsek", "email", "toilet"],
         "filenames": ["profil", "profile", "visi_misi", "fasilitas", "sarpras"],
     },
     "kesiswaan": {
-        "keywords": ["ekstrakurikuler", "ekskul", "osis", "pramuka", "paskibra", "pmr", "tata tertib", "aturan", "seragam", "poin", "pelanggaran", "prestasi siswa", "lomba", "beasiswa", "pip"],
+        "keywords": ["ekstrakurikuler", "ekskul", "eskul", "osis", "pramuka", "paskibra", "pmr", "tata tertib", "aturan", "seragam", "poin", "pelanggaran", "prestasi siswa", "lomba", "beasiswa", "pip", "jadwal eskul", "rohis", "futsal", "basket", "voli", "musik", "tari"],
         "filenames": ["tata_tertib", "ekskul", "kesiswaan", "osis", "tata-tertib", "ekstrakurikuler", "jadwal-ekstrakurikuler"],
     },
     "kepegawaian": {
-        "keywords": ["guru", "wali kelas", "nip", "staf", "tu", "tata usaha", "tenaga pendidik", "kepala tu", "pengajar"],
+        "keywords": ["guru", "wali kelas", "walas", "nip", "staf", "tu", "tata usaha", "tenaga pendidik", "kepala tu", "pengajar", "wali", "kelas 7", "kelas 8", "kelas 9"],
         "filenames": ["guru", "kepegawaian", "staf", "wali_kelas", "wali-kelas", "absen"],
     },
 }
@@ -506,32 +666,51 @@ def infer_document_category(filename: str) -> str:
 def rerank_documents(
     question: str, docs: list[dict], final_k: int = None
 ) -> list[dict]:
-    """Rerank dokumen berdasarkan kombinasi vector similarity, keyword overlap, dan category boosting."""
+    """Rerank dokumen berdasarkan kombinasi vector similarity, keyword overlap, intent boosting, dan token kelas spesifik."""
     if final_k is None:
         final_k = config.RAG_FINAL_K
     qwords = words(question)
     detected_intents = set(detect_query_intent(question))
+    class_tokens = [ct.lower() for ct in extract_class_tokens(question)]
+    ql = question.lower()
+
     scored = []
     for i, doc in enumerate(docs):
-        content = str(doc.get("content") or doc.get("text") or "")
+        content = str(doc.get("content") or doc.get("text") or "").lower()
         vector = float(doc.get("similarity") or doc.get("score") or doc.get("similarity_score") or 0)
         overlap = len(qwords & words(content)) / max(1, len(qwords))
 
-        # Category and filename match boost
         category = str(doc.get("category") or "").lower()
         pdf_name = str(doc.get("pdf_name") or "").lower()
 
         boost = 0.0
+        # 1. Boost jika dokumen sesuai kategori tematik pertanyaan
         if detected_intents:
-            if category in detected_intents:
-                boost += 0.15
-            elif any(intent in pdf_name for intent in detected_intents):
-                boost += 0.10
+            for cat in detected_intents:
+                cat_filenames = THEMATIC_CATEGORIES.get(cat, {}).get("filenames", [])
+                if any(fn in pdf_name for fn in cat_filenames):
+                    boost += 0.20
+                    break
 
-        score = (vector * 0.65) + (overlap * 0.25) + boost
+        # 2. Boost kuat jika dokumen memuat kelas spesifik yang ditanyakan (misal 9.5 / IX-5)
+        if class_tokens and any(ct in content for ct in class_tokens):
+            boost += 0.35
+
+        # 3. Boost jika dokumen memuat ekstrakurikuler saat ditanya eskul
+        if any(ek in ql for ek in ("eskul", "ekskul", "ekstrakurikuler")):
+            if "ekstrakurikuler" in pdf_name or "jadwal-ekstrakurikuler" in pdf_name:
+                boost += 0.30
+
+        # 4. Boost jika ditanya wali kelas / walas dan dokumen adalah wali-kelas
+        if ("walas" in ql or "wali kelas" in ql) and "wali-kelas" in pdf_name:
+            boost += 0.30
+
+        score = (vector * 0.55) + (overlap * 0.20) + boost
         scored.append((score, i, doc))
+
     scored.sort(key=lambda x: x[0], reverse=True)
     return [x[2] for x in scored[:final_k]]
+
 
 
 def is_structured_question(question: str) -> bool:

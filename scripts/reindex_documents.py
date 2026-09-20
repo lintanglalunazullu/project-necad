@@ -175,7 +175,113 @@ def run_reindex():
     ins_tt = sb.table("pdf_documents").insert(tt_rows).execute()
     print(f"✅ Berhasil memasukkan {len(ins_tt.data or [])} chunk baru terstruktur untuk tata-tertib-siswa.")
 
+    # 4. Re-chunk jadwal-ekstrakurikuler
+    ekskul_content = (
+        "[DOKUMEN: jadwal-ekstrakurikuler | TOPIK: Daftar Semua Kegiatan Ekstrakurikuler & Jadwal Hari]\n"
+        "DAFTAR EKSTRAKURIKULER (EKSKUL) DAN JADWAL KEGIATAN SMP NEGERI 2 CIBUNGBULANG TAHUN PELAJARAN 2026/2027:\n\n"
+        "Daftar Kegiatan Ekstrakurikuler yang ada di sekolah:\n"
+        "1. Pramuka: Hari Kamis (Ekskul Wajib)\n"
+        "2. PMR (Palang Merah Remaja): Hari Kamis (Ekskul Wajib)\n"
+        "3. Passus (Pasukan Khusus): Hari Kamis (Ekskul Wajib)\n"
+        "4. Rohis (Kerohanian Islam): Hari Jumat (Ekskul Pilihan)\n"
+        "5. Futsal: Hari Jumat (Ekskul Pilihan)\n"
+        "6. Basket (Bola Basket): Hari Selasa (Ekskul Pilihan)\n"
+        "7. Voli (Bola Voli): Hari Rabu (Ekskul Pilihan)\n"
+        "8. Seni Musik: Hari Jumat (Ekskul Pilihan)\n"
+        "9. Seni Tari: Hari Senin (Ekskul Pilihan)\n"
+        "10. Marching Band: Hari Rabu (Ekskul Pilihan)\n"
+        "11. English Club: Hari Selasa (Ekskul Pilihan)\n"
+        "12. MIPAS (MIPA Siswa): Hari Rabu (Ekskul Pilihan)\n"
+        "13. PLH (Pendidikan Lingkungan Hidup): Hari Senin (Ekskul Pilihan)\n\n"
+        "Catatan: Ekstrakurikuler Pramuka, PMR, dan Passus wajib diikuti sesuai jadwal hari Kamis."
+    )
+    print("🧠 Menghitung embedding Gemini untuk jadwal-ekstrakurikuler...")
+    emb_ekskul = embed_text(ekskul_content)
+    sb.table("pdf_documents").delete().eq("pdf_name", "jadwal-ekstrakurikuler").execute()
+    sb.table("pdf_documents").insert([{
+        "pdf_name": "jadwal-ekstrakurikuler",
+        "category": "public",
+        "content": ekskul_content,
+        "embedding": emb_ekskul,
+    }]).execute()
+    print("✅ Berhasil memasukkan chunk baru terstruktur untuk jadwal-ekstrakurikuler.")
+
+    # 5. Re-chunk wali-kelas
+    wali_chunks = [
+        {
+            "pdf_name": "wali-kelas",
+            "category": "public",
+            "content": (
+                "[DOKUMEN: wali-kelas | KELAS 7 / VII]\n"
+                "DAFTAR WALI KELAS VII (KELAS 7) SMP NEGERI 2 CIBUNGBULANG TP 2026/2027:\n"
+                "- Wali Kelas 7.1 / VII-1: Hj. Rahmatullaeliah, S. Pd.\n"
+                "- Wali Kelas 7.2 / VII-2: Fitri Inayah, S.Pd.\n"
+                "- Wali Kelas 7.3 / VII-3: Ika Permana, S.Pd.\n"
+                "- Wali Kelas 7.4 / VII-4: Nonok Fatonah, S. Pd.\n"
+                "- Wali Kelas 7.5 / VII-5: Iwan Kurniawan, S.Pd.\n"
+                "- Wali Kelas 7.6 / VII-6: Atep Nugraha Darisman, S.Pd.\n"
+                "- Wali Kelas 7.7 / VII-7: Mega Suci Ramdani, SH, S.Pd.\n"
+                "- Wali Kelas 7.8 / VII-8: Nuris Tia Andina, S.Pd.\n"
+                "- Wali Kelas 7.9 / VII-9: Reni Yusnita, SP.\n"
+                "- Wali Kelas 7.10 / VII-10: Nidaan Chofiyyah Astari, S.Pd."
+            ),
+        },
+        {
+            "pdf_name": "wali-kelas",
+            "category": "public",
+            "content": (
+                "[DOKUMEN: wali-kelas | KELAS 8 / VIII]\n"
+                "DAFTAR WALI KELAS VIII (KELAS 8) SMP NEGERI 2 CIBUNGBULANG TP 2026/2027:\n"
+                "- Wali Kelas 8.1 / VIII-1: A. Kusdinar, S. Pd.\n"
+                "- Wali Kelas 8.2 / VIII-2: Bambang Ilham F., S.Pd.\n"
+                "- Wali Kelas 8.3 / VIII-3: Khotimah, S.Pd.\n"
+                "- Wali Kelas 8.4 / VIII-4: Fajar Zikri Utama, S.Pd.\n"
+                "- Wali Kelas 8.5 / VIII-5: Hj. Mela Dewi Rahmawati, S. Pd.\n"
+                "- Wali Kelas 8.6 / VIII-6: Tata, S.Kom.\n"
+                "- Wali Kelas 8.7 / VIII-7: Asti Wigianti, S.Pd.\n"
+                "- Wali Kelas 8.8 / VIII-8: Dina Rosdiana, S.Pd.\n"
+                "- Wali Kelas 8.9 / VIII-9: Arum Nuraeni, S.Pd.\n"
+                "- Wali Kelas 8.10 / VIII-10: Yayah Robaiyah, S. Pd. I."
+            ),
+        },
+        {
+            "pdf_name": "wali-kelas",
+            "category": "public",
+            "content": (
+                "[DOKUMEN: wali-kelas | KELAS 9 / IX]\n"
+                "DAFTAR WALI KELAS IX (KELAS 9) SMP NEGERI 2 CIBUNGBULANG TP 2026/2027:\n"
+                "- Wali Kelas 9.1 / IX-1: Anik Tri Handayani, S.Pd.\n"
+                "- Wali Kelas 9.2 / IX-2: Maya, S.Pd.\n"
+                "- Wali Kelas 9.3 / IX-3: Mahmud Badarudin, S.Pd., M.Han.\n"
+                "- Wali Kelas 9.4 / IX-4: Elin Erlina, S. Pd.\n"
+                "- Wali Kelas 9.5 / IX-5: Santi Komalapuri, S. Pd.\n"
+                "- Wali Kelas 9.6 / IX-6: Dedi Sutendi, S.Pd.\n"
+                "- Wali Kelas 9.7 / IX-7: Ficka Anggraeny, S.Pd.\n"
+                "- Wali Kelas 9.8 / IX-8: Ahmad Yudi Miftahudin, S.Pd.I.\n"
+                "- Wali Kelas 9.9 / IX-9: Fitria Pandyasari, S.Pd.\n"
+                "- Wali Kelas 9.10 / IX-10: Neneng Danukarti, SE, MM.\n\n"
+                "Kepala Sekolah: Rosihan Anwar, S. Pd. MM (NIP. 196608151991031008)"
+            ),
+        },
+    ]
+
+    print("🧠 Menghitung embedding Gemini untuk wali-kelas...")
+    wali_rows = []
+    for item in wali_chunks:
+        emb = embed_text(item["content"])
+        wali_rows.append({
+            "pdf_name": item["pdf_name"],
+            "category": item["category"],
+            "content": item["content"],
+            "embedding": emb,
+        })
+
+    sb.table("pdf_documents").delete().eq("pdf_name", "wali-kelas").execute()
+    sb.table("pdf_documents").insert(wali_rows).execute()
+    print("✅ Berhasil memasukkan 3 chunk baru terstruktur untuk wali-kelas.")
+
     print("\n🎉 Re-indexing selesai 100%! Semua dokumen siap diuji.")
 
 if __name__ == "__main__":
     run_reindex()
+

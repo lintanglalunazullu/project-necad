@@ -41,7 +41,7 @@ from ai.generation import (
     render_documents_raw,
 )
 from ai.guardrails import check_guardrails, GUARDRAIL_DEFLECTION_ANSWER
-from ai.retrieval import get_similar_documents, is_structured_question, rerank_documents
+from ai.retrieval import get_similar_documents, is_structured_question, rerank_documents, normalize_informal_query
 from ai.session import build_search_query, ensure_session, get_session_history, save_message
 from utils.helpers import estimate_tokens
 
@@ -110,7 +110,8 @@ def _query_docs_sync(supabase: Client, body: QueryRequest, authorization: Option
         raise HTTPException(400, "question is required")
 
     try:
-        question_embedding = embed_query(question)
+        clean_q = normalize_informal_query(question)
+        question_embedding = embed_query(clean_q or question)
     except Exception as embed_err:
         raise HTTPException(400, f"Gagal generate embedding: {embed_err}")
     retrieved = get_similar_documents(supabase, question_embedding, role, config.RAG_TOP_K, question)
@@ -278,7 +279,8 @@ def _chat_sync(supabase: Client, body: QueryRequest, authorization: Optional[str
     # ========= NORMAL RAG SEARCH =========
     else:
         try:
-            search_embedding = embed_query(search_query)
+            clean_search_query = normalize_informal_query(search_query)
+            search_embedding = embed_query(clean_search_query or search_query)
         except Exception as embed_err:
             err_str = str(embed_err)
             logger.error("Embedding generation failed: %s", err_str)
@@ -531,7 +533,8 @@ async def chat_stream(request: Request, body: QueryRequest, authorization: Optio
         # 3. Context retrieval
         def _fetch_rag():
             try:
-                q_emb = embed_query(search_query)
+                clean_search_query = normalize_informal_query(search_query)
+                q_emb = embed_query(clean_search_query or search_query)
             except Exception as exc:
                 return None, [], str(exc)
             retrieved = get_similar_documents(supabase, q_emb, role, config.RAG_TOP_K, search_query)

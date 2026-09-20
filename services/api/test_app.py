@@ -585,10 +585,45 @@ class TestPortalShortcuts:
         assert res_teacher.headers["location"] == "/mentor/teacher/chat.html"
 
 
+class TestInformalLanguageAndClassTokens:
+    def test_normalize_informal_query(self):
+        from ai.retrieval import normalize_informal_query
+        assert "ekstrakurikuler" in normalize_informal_query("ada eskul apa aja sih disini")
+        assert "wali kelas" in normalize_informal_query("siapa walas 9.5")
+        assert "kepala sekolah" in normalize_informal_query("kepsek nya sp skrg")
+        assert "nomor telepon" in normalize_informal_query("nohp sklh brp ya")
+        assert "matematika" in normalize_informal_query("guru mtk siapa aja ya")
+
+    def test_extract_class_tokens(self):
+        from ai.retrieval import extract_class_tokens
+        tokens_95 = extract_class_tokens("siapa walas 9.5")
+        assert "9.5" in tokens_95
+        assert "IX-5" in tokens_95
+
+        tokens_71 = extract_class_tokens("walas 7-1 siapa ya min")
+        assert "7.1" in tokens_71
+        assert "VII-1" in tokens_71
+
+        tokens_84 = extract_class_tokens("wali kelas 8 4 siapa bro")
+        assert "8.4" in tokens_84
+        assert "VIII-4" in tokens_84
+
+    def test_extract_search_candidates(self):
+        from ai.retrieval import _extract_search_candidates
+        cands_eskul = _extract_search_candidates("ada eskul apa aja sih disini")
+        assert "ekstrakurikuler" in cands_eskul or "ekskul" in cands_eskul
+
+        cands_walas = _extract_search_candidates("siapa walas 9.5")
+        assert any("IX-5" in c for c in cands_walas)
+        assert any("9.5" in c for c in cands_walas)
+
+
+
 if __name__ == "__main__":
     # Jalankan langsung: python test_app.py
     import subprocess
     subprocess.run([sys.executable, "-m", "pytest", __file__, "-v"], check=False)
+
 
 
 

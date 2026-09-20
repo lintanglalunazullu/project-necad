@@ -672,6 +672,91 @@ class TestLearnedSynonymsAndAutonomousLearning:
         assert res.status_code == 401
 
 
+class TestDocumentIntelligenceAndOCR:
+    def test_ocr_endpoint_unauthorized(self):
+        from fastapi.testclient import TestClient
+        from app import app
+        client = TestClient(app)
+        res = client.post("/documents/ocr-page", json={"image_base64": "abc"})
+        assert res.status_code == 401
+
+    def test_summarize_endpoint_unauthorized(self):
+        from fastapi.testclient import TestClient
+        from app import app
+        client = TestClient(app)
+        res = client.post("/documents/summarize-and-suggest", json={"document_name": "Test", "sample_text": "Sample text"})
+        assert res.status_code == 401
+
+    def test_ocr_endpoint_authorized(self, monkeypatch):
+        from fastapi.testclient import TestClient
+        from app import app
+
+        monkeypatch.setattr("routes.documents.authenticated_user", lambda sb, auth: ("teacher_id", "teacher"))
+        monkeypatch.setattr("routes.documents.ocr_image_with_gemini", lambda b: "# Ekstrak Dokumen\n| No | Nama |")
+
+        client = TestClient(app)
+        res = client.post(
+            "/documents/ocr-page",
+            json={"image_base64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=", "page_num": 1},
+            headers={"Authorization": "Bearer mock-teacher-token"}
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["success"] is True
+        assert "| No | Nama |" in data["markdown_text"]
+
+    def test_summarize_endpoint_authorized(self, monkeypatch):
+        from fastapi.testclient import TestClient
+        from app import app
+
+        monkeypatch.setattr("routes.documents.authenticated_user", lambda sb, auth: ("admin_id", "admin"))
+        monkeypatch.setattr(
+            "routes.documents._call_gemini",
+            lambda provider, messages: ('{"summary": "Ringkasan dokumen sekolah.", "suggested_questions": ["Apa itu?"]}', {})
+        )
+
+        client = TestClient(app)
+        res = client.post(
+            "/documents/summarize-and-suggest",
+            json={"document_name": "Tata Tertib", "sample_text": "Isi tata tertib siswa."},
+            headers={"Authorization": "Bearer mock-admin-token"}
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["success"] is True
+        assert "Ringkasan" in data["summary"]
+        assert len(data["suggested_questions"]) == 1
+
+    def test_clean_upsert_purges_existing_document(self, monkeypatch):
+        from fastapi.testclient import TestClient
+        from app import app
+        from unittest.mock import MagicMock
+        import config
+
+        monkeypatch.setattr("routes.documents.authenticated_user", lambda sb, auth: ("admin_id", "admin"))
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.delete.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+        mock_sb.table.return_value.insert.return_value.select.return_value.execute.return_value = MagicMock(data=[{"id": 1}], error=None)
+        monkeypatch.setattr("routes.documents._get_supabase", lambda: mock_sb)
+        monkeypatch.setattr("routes.documents.embed_text", lambda txt: [0.1] * 384)
+        monkeypatch.setattr("routes.documents.validate_embedding", lambda emb: True)
+
+        client = TestClient(app)
+        res = client.post(
+            "/embed-upsert",
+            json={
+                "clean_upsert": True,
+                "chunks": [
+                    {"text": "Teks baru tata tertib", "pdf_name": "Tata_Tertib_2026", "category": "public"}
+                ]
+            },
+            headers={"Authorization": "Bearer mock-admin-token"}
+        )
+        assert res.status_code == 200
+        # Verify delete was called for the pdf_name to prevent duplicate/stale chunks
+        mock_sb.table.return_value.delete.return_value.eq.assert_called_with("pdf_name", "Tata_Tertib_2026")
+
+
 if __name__ == "__main__":
     # Jalankan langsung: python test_app.py
     import subprocess

@@ -36,12 +36,24 @@
     }
   }
 
+  function resolveBackToSchoolWeb() {
+    const backLink = document.getElementById('backToSchoolWeb');
+    if (!backLink) return;
+    if (window.location.hostname === 'localhost' && window.location.port === '8081') {
+      backLink.href = 'http://localhost:8080/';
+    } else {
+      backLink.href = '/';
+    }
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
       syncAuthState();
+      resolveBackToSchoolWeb();
     }, { once: true });
   } else {
     syncAuthState();
+    resolveBackToSchoolWeb();
   }
 
   if (supabaseClient) {

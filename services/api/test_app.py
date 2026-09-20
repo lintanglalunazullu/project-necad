@@ -551,6 +551,40 @@ class TestKnowledgeGapAndStreaming:
         assert inserted_data["reason"] == "no_documents"
 
 
+class TestPortalShortcuts:
+    def test_redirect_shortcuts(self):
+        from fastapi.testclient import TestClient
+        from app import app
+        client = TestClient(app)
+
+        # /login redirects
+        res_login = client.get("/login", follow_redirects=False)
+        assert res_login.status_code == 302
+        assert res_login.headers["location"] == "/mentor/login.html"
+
+        res_login_html = client.get("/login.html", follow_redirects=False)
+        assert res_login_html.status_code == 302
+        assert res_login_html.headers["location"] == "/mentor/login.html"
+
+        # /admin redirects
+        res_admin = client.get("/admin", follow_redirects=False)
+        assert res_admin.status_code == 302
+        assert res_admin.headers["location"] == "/mentor/admin/"
+
+        res_admin_slash = client.get("/admin/", follow_redirects=False)
+        assert res_admin_slash.status_code == 302
+        assert res_admin_slash.headers["location"] == "/mentor/admin/"
+
+        res_admin_login = client.get("/admin/login.html", follow_redirects=False)
+        assert res_admin_login.status_code == 302
+        assert res_admin_login.headers["location"] == "/mentor/admin/login.html"
+
+        # /teacher redirects
+        res_teacher = client.get("/teacher", follow_redirects=False)
+        assert res_teacher.status_code == 302
+        assert res_teacher.headers["location"] == "/mentor/teacher/"
+
+
 if __name__ == "__main__":
     # Jalankan langsung: python test_app.py
     import subprocess

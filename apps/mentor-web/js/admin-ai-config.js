@@ -508,5 +508,175 @@
     document.querySelector('[data-mobile-sidebar-overlay]')?.classList.add('hidden');
   });
 
+  // ==========================================
+  // Auto-Smart Learned Synonyms Management
+  // ==========================================
+  let learnedSynonymsList = [];
+
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function renderLearnedTable(items) {
+    const tbody = document.getElementById('learnedWordsTableBody');
+    if (!tbody) return;
+
+    if (!items || items.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" class="py-8 text-center text-slate-400 font-sans">
+            <span class="block text-2xl mb-1">🌱</span>
+            Belum ada kosakata baru yang tersimpan di memori. AI akan secara otomatis mempelajari kosakata gaul dan daerah dari obrolan pengguna!
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = items.map((item) => {
+      const isAuto = (item.source || '').toLowerCase().includes('auto');
+      const badgeClass = isAuto
+        ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+        : 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+      const badgeLabel = isAuto ? '🤖 Auto-Smart AI' : '👤 Admin';
+      const count = item.occurrences || 1;
+
+      return `
+        <tr class="hover:bg-white/[0.02] transition-colors group">
+          <td class="py-3 px-4 font-mono font-medium text-white text-xs">
+            <span class="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-amber-300">${escapeHtml(item.slang_word)}</span>
+          </td>
+          <td class="py-3 px-4 font-sans text-xs text-slate-200">
+            ${escapeHtml(item.canonical_word)}
+          </td>
+          <td class="py-3 px-4 text-center font-mono text-xs text-slate-300">
+            <span class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300">${count}x</span>
+          </td>
+          <td class="py-3 px-4 font-sans text-xs">
+            <span class="inline-block px-2 py-0.5 text-[10px] rounded-full border ${badgeClass}">
+              ${badgeLabel}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-right">
+            <button type="button" data-delete-slang="${escapeHtml(item.slang_word)}" class="px-2.5 py-1 text-[11px] rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 transition-colors">
+              Hapus
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function loadLearnedSynonyms() {
+    try {
+      const res = await apiRequest('/admin/ai/learned-synonyms');
+      learnedSynonymsList = res.synonyms || [];
+      const badge = document.getElementById('learnedCountBadge');
+      if (badge) {
+        badge.textContent = `${learnedSynonymsList.length} Kata Aktif`;
+      }
+      const filterVal = (document.getElementById('filterLearnedInput')?.value || '').toLowerCase().trim();
+      if (filterVal) {
+        renderLearnedTable(learnedSynonymsList.filter(it => 
+          (it.slang_word || '').toLowerCase().includes(filterVal) || 
+          (it.canonical_word || '').toLowerCase().includes(filterVal)
+        ));
+      } else {
+        renderLearnedTable(learnedSynonymsList);
+      }
+    } catch (err) {
+      console.warn('Gagal memuat memori kosakata:', err);
+    }
+  }
+
+  // Filter input
+  document.getElementById('filterLearnedInput')?.addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase().trim();
+    if (!q) {
+      renderLearnedTable(learnedSynonymsList);
+      return;
+    }
+    const filtered = learnedSynonymsList.filter(it => 
+      (it.slang_word || '').toLowerCase().includes(q) || 
+      (it.canonical_word || '').toLowerCase().includes(q)
+    );
+    renderLearnedTable(filtered);
+  });
+
+  // Refresh button
+  document.getElementById('btnRefreshLearnedWords')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    try {
+      btn.disabled = true;
+      btn.innerHTML = '<span>↻</span> Memperbarui...';
+      await apiRequest('/admin/ai/trigger-learning', { method: 'POST' });
+      await loadLearnedSynonyms();
+      showNotification('Memori kosakata berhasil disinkronkan.');
+    } catch (err) {
+      showNotification(`Gagal memperbarui: ${err.message}`, true);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<span>↻</span> Segarkan Memori';
+    }
+  });
+
+  // Form add
+  document.getElementById('formAddLearnedWord')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const slangInput = document.getElementById('inputSlangWord');
+    const canonicalInput = document.getElementById('inputCanonicalWord');
+    const slang_word = (slangInput?.value || '').trim();
+    const canonical_word = (canonicalInput?.value || '').trim();
+
+    if (!slang_word || !canonical_word) {
+      showNotification('Silakan isi kata gaul dan padanannya.', true);
+      return;
+    }
+
+    const submitBtn = document.getElementById('btnAddLearnedWord');
+    try {
+      if (submitBtn) submitBtn.disabled = true;
+      await apiRequest('/admin/ai/learned-synonyms', {
+        method: 'POST',
+        body: JSON.stringify({ slang_word, canonical_word })
+      });
+      showNotification(`Kata "${slang_word}" berhasil disimpan ke memori AI.`);
+      if (slangInput) slangInput.value = '';
+      if (canonicalInput) canonicalInput.value = '';
+      await loadLearnedSynonyms();
+    } catch (err) {
+      showNotification(`Gagal menyimpan: ${err.message}`, true);
+    } finally {
+      if (submitBtn) submitBtn.disabled = false;
+    }
+  });
+
+  // Event delegation for delete buttons
+  document.getElementById('learnedWordsTableBody')?.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-delete-slang]');
+    if (!btn) return;
+    const slang = btn.getAttribute('data-delete-slang');
+    if (!confirm(`Hapus kata "${slang}" dari memori AI?`)) return;
+
+    try {
+      btn.disabled = true;
+      btn.textContent = '...';
+      await apiRequest(`/admin/ai/learned-synonyms/${encodeURIComponent(slang)}`, {
+        method: 'DELETE'
+      });
+      showNotification(`Kata "${slang}" berhasil dihapus dari memori AI.`);
+      await loadLearnedSynonyms();
+    } catch (err) {
+      showNotification(`Gagal menghapus: ${err.message}`, true);
+      btn.disabled = false;
+      btn.textContent = 'Hapus';
+    }
+  });
+
   await loadProviders();
+  await loadLearnedSynonyms();
 })();

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from supabase import Client
 
 from auth import require_admin
-from ai.retrieval import fetch_document_summary
+from ai.retrieval import fetch_document_summary, get_synonyms_registry
 from ai.generation import get_provider_manager
 from utils.helpers import extract_response_parts
 
@@ -1002,4 +1002,80 @@ async def get_unanswered_queries(authorization: Optional[str] = Header(default=N
     except Exception as exc:
         logger.warning("Gagal mengambil unanswered queries: %s", exc)
         return {"total_records": 0, "top_gaps": [], "recent": []}
+
+
+# ======================= AUTO-SMART LEARNED SYNONYMS =======================
+
+class LearnedTermRequest(BaseModel):
+    slang_word: str = Field(..., min_length=2, max_length=100)
+    canonical_word: str = Field(..., min_length=2, max_length=100)
+
+
+@router.get("/ai/learned-synonyms")
+async def get_learned_synonyms(authorization: Optional[str] = Header(default=None)):
+    """Daftar seluruh kosakata gaul/daerah yang dipelajari mandiri oleh AI atau ditambahkan admin."""
+    supabase = _get_supabase()
+    require_admin(supabase, authorization)
+    registry = get_synonyms_registry()
+    items = registry.get_learned_list(supabase)
+    return {
+        "success": True,
+        "total": len(items),
+        "synonyms": items,
+    }
+
+
+@router.post("/ai/learned-synonyms")
+async def add_learned_synonym(
+    body: LearnedTermRequest,
+    authorization: Optional[str] = Header(default=None)
+):
+    """Tambah atau perbarui pasangan kata gaul dan padanan bahasa bakunya ke memori AI."""
+    supabase = _get_supabase()
+    require_admin(supabase, authorization)
+    registry = get_synonyms_registry()
+    ok = registry.record_learned_term(
+        supabase=supabase,
+        slang_word=body.slang_word,
+        canonical_word=body.canonical_word,
+        source="manual_admin"
+    )
+    if not ok:
+        raise HTTPException(status_code=400, detail="Kata tidak valid atau termasuk kata henti (stopwords).")
+    return {
+        "success": True,
+        "slang_word": body.slang_word.strip().lower(),
+        "canonical_word": body.canonical_word.strip().lower(),
+    }
+
+
+@router.delete("/ai/learned-synonyms/{slang_word}")
+async def delete_learned_synonym(
+    slang_word: str,
+    authorization: Optional[str] = Header(default=None)
+):
+    """Hapus kata dari memori pembelajaran AI."""
+    supabase = _get_supabase()
+    require_admin(supabase, authorization)
+    registry = get_synonyms_registry()
+    ok = registry.delete_learned_term(supabase, slang_word)
+    return {
+        "success": ok,
+        "slang_word": slang_word.strip().lower(),
+    }
+
+
+@router.post("/ai/trigger-learning")
+async def trigger_learning_sync(authorization: Optional[str] = Header(default=None)):
+    """Sinkronkan paksa memori kosakata AI dari database."""
+    supabase = _get_supabase()
+    require_admin(supabase, authorization)
+    registry = get_synonyms_registry()
+    registry.sync_from_db(supabase, force=True)
+    items = registry.get_learned_list(supabase)
+    return {
+        "success": True,
+        "total": len(items),
+        "message": f"Berhasil menyinkronkan {len(items)} kosakata ke memori aktif AI."
+    }
 

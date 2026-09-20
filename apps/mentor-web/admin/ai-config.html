@@ -246,6 +246,74 @@
                         </button>
                     </div>
 
+            <!-- Auto-Smart Learned Synonyms Section -->
+            <div class="mt-8 bg-panel border border-white/10 rounded-xl overflow-hidden shadow-2xl">
+                <div class="p-6 border-b border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div class="flex items-center gap-2.5">
+                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-base">🧠</span>
+                            <h2 class="text-base font-semibold text-white">Memori Bahasa Mandiri (Auto-Smart Learning)</h2>
+                            <span id="learnedCountBadge" class="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">0 Kata Aktif</span>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">
+                            AI secara otomatis mempelajari kosakata gaul, singkatan pesan, dan bahasa daerah (Sunda/Betawi) dari pertanyaan pengguna setelah diverifikasi akurat dari dokumen. Kata yang dipelajari diproses instan (0ms) tanpa membebani kuota API.
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button type="button" id="btnRefreshLearnedWords" class="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs font-medium text-slate-200 transition-colors flex items-center gap-1.5">
+                            <span>↻</span> Segarkan Memori
+                        </button>
+                    </div>
+                </div>
+
+                <div class="p-6 space-y-6">
+                    <!-- Form Tambah Kata Manual -->
+                    <div class="bg-workspace/50 border border-white/5 rounded-lg p-4">
+                        <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">Tambah atau Koreksi Kosakata Manual</h3>
+                        <form id="formAddLearnedWord" class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div class="sm:col-span-5">
+                                <label class="block text-[11px] text-slate-400 mb-1">Kata Gaul / Singkatan / Daerah</label>
+                                <input type="text" id="inputSlangWord" placeholder="contoh: saha, walas, latian, spill" required class="w-full bg-workspace border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 outline-none" />
+                            </div>
+                            <div class="sm:col-span-5">
+                                <label class="block text-[11px] text-slate-400 mb-1">Padanan Bahasa Baku Dokumen</label>
+                                <input type="text" id="inputCanonicalWord" placeholder="contoh: siapa, wali kelas, latihan, jelaskan" required class="w-full bg-workspace border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:border-blue-500 outline-none" />
+                            </div>
+                            <div class="sm:col-span-2 flex items-end">
+                                <button type="submit" id="btnAddLearnedWord" class="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium text-white shadow transition-colors">
+                                    + Simpan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Tabel Kosakata yang Dipelajari -->
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Daftar Kosakata dalam Memori AI</h3>
+                            <input type="text" id="filterLearnedInput" placeholder="Cari kosakata..." class="bg-workspace border border-white/10 rounded-md px-2.5 py-1 text-xs text-white placeholder:text-slate-600 focus:border-blue-500 outline-none w-48" />
+                        </div>
+                        <div class="border border-white/10 rounded-lg overflow-hidden bg-workspace/30">
+                            <div class="max-h-72 overflow-y-auto">
+                                <table class="w-full text-left text-xs text-slate-300">
+                                    <thead class="bg-white/5 uppercase text-[10px] text-slate-400 font-semibold sticky top-0 backdrop-blur-sm z-10 border-b border-white/10">
+                                        <tr>
+                                            <th class="py-2.5 px-4 font-sans">Kata Gaul / Daerah</th>
+                                            <th class="py-2.5 px-4 font-sans">Arti / Padanan Baku</th>
+                                            <th class="py-2.5 px-4 text-center font-sans">Frekuensi</th>
+                                            <th class="py-2.5 px-4 font-sans">Sumber</th>
+                                            <th class="py-2.5 px-4 text-right font-sans">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="learnedWordsTableBody" class="divide-y divide-white/5 font-sans">
+                                        <tr>
+                                            <td colspan="5" class="py-6 text-center text-slate-500 font-sans">Memuat data kosakata...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>

@@ -41,7 +41,14 @@ from ai.generation import (
     render_documents_raw,
 )
 from ai.guardrails import check_guardrails, GUARDRAIL_DEFLECTION_ANSWER
-from ai.retrieval import get_similar_documents, is_structured_question, rerank_documents, normalize_informal_query
+from ai.retrieval import (
+    auto_extract_and_learn_synonyms,
+    get_similar_documents,
+    is_structured_question,
+    normalize_informal_query,
+    reformulate_with_llm,
+    rerank_documents,
+)
 from ai.session import build_search_query, ensure_session, get_session_history, save_message
 from utils.helpers import estimate_tokens
 
@@ -279,7 +286,7 @@ def _chat_sync(supabase: Client, body: QueryRequest, authorization: Optional[str
     # ========= NORMAL RAG SEARCH =========
     else:
         try:
-            clean_search_query = normalize_informal_query(search_query)
+            clean_search_query = normalize_informal_query(search_query, supabase)
             search_embedding = embed_query(clean_search_query or search_query)
         except Exception as embed_err:
             err_str = str(embed_err)
@@ -304,6 +311,27 @@ def _chat_sync(supabase: Client, body: QueryRequest, authorization: Optional[str
         retrieved = get_similar_documents(supabase, search_embedding, role, config.RAG_TOP_K, search_query)
         accessible_documents = filter_documents_for_role(retrieved, role)
         docs = rerank_documents(search_query, accessible_documents, config.RAG_FINAL_K)
+
+        reformulation = None
+        if not docs:
+            # Smart Auto-Reformulation: jika pencarian awal kosong, LLM menganalisis maksud kata gaul/daerah baru
+            try:
+                reformulation = reformulate_with_llm(question)
+                if reformulation and reformulation.get("canonical_query"):
+                    cq = str(reformulation["canonical_query"]).strip()
+                    if cq and cq.lower() != question.strip().lower():
+                        logger.info("Smart reformulation triggered: '%s' -> '%s'", question, cq)
+                        cq_clean = normalize_informal_query(cq, supabase)
+                        cq_embedding = embed_query(cq_clean or cq)
+                        retrieved_reform = get_similar_documents(supabase, cq_embedding, role, config.RAG_TOP_K, cq)
+                        accessible_reform = filter_documents_for_role(retrieved_reform, role)
+                        docs_reform = rerank_documents(cq, accessible_reform, config.RAG_FINAL_K)
+                        if docs_reform:
+                            retrieved = retrieved_reform
+                            docs = docs_reform
+                            search_query = cq
+            except Exception as reform_err:
+                logger.debug("Smart reformulation skipped: %s", reform_err)
 
         # No evidence guard
         if not docs:
@@ -442,6 +470,21 @@ def _chat_sync(supabase: Client, body: QueryRequest, authorization: Optional[str
     else:
         final_sources = public_sources(docs)
 
+    # Auto-smart learning: jika jawaban didukung bukti kuat (supported=True) dan ada kosakata baru terdeteksi
+    if evidence.get("supported", False) and not claims_no_info and docs:
+        try:
+            new_terms = (reformulation.get("new_slang_detected") if reformulation else None) or []
+            auto_extract_and_learn_synonyms(
+                supabase=supabase,
+                question=question,
+                docs=docs,
+                answer=answer,
+                evidence=evidence,
+                new_terms=new_terms
+            )
+        except Exception as learn_err:
+            logger.debug("Auto-learning error: %s", learn_err)
+
     result_payload = {
         "answer": answer,
         "session_id": body.session_id if persist_session else None,
@@ -533,23 +576,41 @@ async def chat_stream(request: Request, body: QueryRequest, authorization: Optio
         # 3. Context retrieval
         def _fetch_rag():
             try:
-                clean_search_query = normalize_informal_query(search_query)
+                clean_search_query = normalize_informal_query(search_query, supabase)
                 q_emb = embed_query(clean_search_query or search_query)
             except Exception as exc:
-                return None, [], str(exc)
+                return None, [], None, str(exc)
             retrieved = get_similar_documents(supabase, q_emb, role, config.RAG_TOP_K, search_query)
             accessible = filter_documents_for_role(retrieved, role)
             docs = rerank_documents(search_query, accessible, config.RAG_FINAL_K)
+            reformulation = None
             if not docs:
-                return "", [], None
+                try:
+                    reformulation = reformulate_with_llm(sanitized_q)
+                    if reformulation and reformulation.get("canonical_query"):
+                        cq = str(reformulation["canonical_query"]).strip()
+                        if cq and cq.lower() != sanitized_q.strip().lower():
+                            cq_clean = normalize_informal_query(cq, supabase)
+                            cq_emb = embed_query(cq_clean or cq)
+                            ret_ref = get_similar_documents(supabase, cq_emb, role, config.RAG_TOP_K, cq)
+                            acc_ref = filter_documents_for_role(ret_ref, role)
+                            docs_ref = rerank_documents(cq, acc_ref, config.RAG_FINAL_K)
+                            if docs_ref:
+                                docs = docs_ref
+                                search_query_ref = cq
+                except Exception as r_err:
+                    logger.debug("Stream reformulation error: %s", r_err)
+
+            if not docs:
+                return "", [], None, None
             if is_structured_question(sanitized_q):
                 ctx = render_documents_raw(docs)
             else:
                 context_budget = min(config.MAX_CONTEXT_TOKENS, max(500, config.MAX_INPUT_TOKENS - estimate_tokens(SYSTEM_PROMPT + search_query) - 300))
                 ctx, _ = compress_context(search_query, docs, context_budget) if config.COMPRESS_CONTEXT else (render_documents_raw(docs), None)
-            return ctx, docs, None
+            return ctx, docs, reformulation, None
 
-        context, docs, err = await asyncio.to_thread(_fetch_rag)
+        context, docs, stream_reformulation, err = await asyncio.to_thread(_fetch_rag)
         if err:
             err_msg = f"⚠️ Gagal memproses embedding dokumen: {err}"
             yield f"event: token\ndata: {json.dumps({'text': err_msg})}\n\n"
@@ -618,6 +679,19 @@ async def chat_stream(request: Request, body: QueryRequest, authorization: Optio
                 evidence = {"score": 0.0, "level": "low", "supported": False}
         else:
             final_sources = public_sources(docs)
+            if docs:
+                try:
+                    new_terms = (stream_reformulation.get("new_slang_detected") if stream_reformulation else None) or []
+                    auto_extract_and_learn_synonyms(
+                        supabase=supabase,
+                        question=sanitized_q,
+                        docs=docs,
+                        answer=cleaned_ans,
+                        evidence=evidence,
+                        new_terms=new_terms
+                    )
+                except Exception as l_err:
+                    logger.debug("Stream auto-learning error: %s", l_err)
 
         yield f"event: metadata\ndata: {json.dumps({'provider': provider_used, 'sources': final_sources, 'evidence': evidence})}\n\n"
         yield f"event: done\ndata: {json.dumps({'session_id': body.session_id})}\n\n"

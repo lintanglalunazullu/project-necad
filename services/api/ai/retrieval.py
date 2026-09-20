@@ -10,9 +10,13 @@
 # (pakai index HNSW + FTS yang sudah ada) untuk SEMUA role, termasuk "user" biasa.
 # Fetch-seluruh-tabel + cosine similarity di Python hanya dipakai sebagai FALLBACK
 # kalau RPC gagal (mis. koneksi database bermasalah).
+import json
 import logging
 import re
-from typing import Any
+import threading
+import time
+from datetime import datetime, timezone
+from typing import Any, Optional
 
 from supabase import Client
 
@@ -21,6 +25,7 @@ from auth import allowed_categories, filter_documents_for_role, filter_rpc_docum
 from utils.helpers import extract_response_parts, words
 
 logger = logging.getLogger("aksaraku.retrieval")
+
 
 
 # ======================= HELPERS =======================
@@ -340,7 +345,7 @@ CHAT_FILLERS = {
     "si", "sih", "aja", "ajah", "doang", "lah", "kah", "pun", "deh", "dong", "dunk",
     "nih", "kan", "ya", "yah", "woy", "rek", "min", "admin", "bang", "kak", "pak", "bu",
     "om", "tante", "gan", "coy", "bray", "ges", "guys", "beneran", "dah", "bro", "sis",
-    "disini", "situ", "sini", "kok", "loh", "lho", "toh"
+    "disini", "situ", "sini", "kok", "loh", "lho", "toh", "cik", "teh", "mah", "atuh", "euy", "punten", "wae", "geura", "pisan"
 }
 
 ID_STOPWORDS = {
@@ -357,10 +362,11 @@ ID_STOPWORDS = {
     "dah", "bro", "sis", "disini", "situ", "sini", "klo", "kl", "kalo", "krn", "karna", "bwt",
     "utk", "dgn", "dr", "tp", "tpi", "yg", "udh", "udah", "sdh", "blm", "lom", "ga", "gak",
     "nggak", "ngga", "engga", "kagak", "bgt", "banget", "tau", "tw", "sp", "syp", "brp",
-    "kpn", "dmn", "gmn", "knp", "sy", "aku", "gw", "gue", "gua", "lu", "lo", "loe", "skrg"
+    "kpn", "dmn", "gmn", "knp", "sy", "aku", "gw", "gue", "gua", "lu", "lo", "loe", "skrg",
+    "cik", "teh", "mah", "atuh", "euy", "punten", "wae", "geura", "pisan"
 }
 
-SYNONYMS = SLANG_MAP
+SEED_SLANG_MAP = SLANG_MAP
 
 KEY_ENTITIES = [
     "luas tanah", "luas bangunan", "kepala sekolah", "wali kelas",
@@ -374,6 +380,240 @@ KEY_ENTITIES = [
 
 ROMAN_MAP = {"7": "VII", "8": "VIII", "9": "IX"}
 REV_ROMAN_MAP = {"vii": "7", "viii": "8", "ix": "9"}
+
+
+class LearnedSynonymsRegistry:
+    """Registry memori mandiri thread-safe untuk menyimpan kosakata dan sinonim yang dipelajari AI."""
+    _instance = None
+    _lock = threading.Lock()
+
+    def __init__(self):
+        self._learned_cache: dict[str, str] = {}
+        self._items_metadata: list[dict] = []
+        self._last_synced: float = 0.0
+        self._sync_interval: float = 30.0  # sync tiap 30 detik
+
+    @classmethod
+    def get_instance(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = cls()
+            return cls._instance
+
+    def sync_from_db(self, supabase: Optional[Client] = None, force: bool = False) -> None:
+        if not supabase:
+            return
+        now = time.time()
+        if not force and (now - self._last_synced < self._sync_interval):
+            return
+
+        with self._lock:
+            try:
+                # 1. Coba baca dari tabel ai_learned_synonyms jika ada
+                try:
+                    res = supabase.table("ai_learned_synonyms").select("*").order("occurrences", desc=True).execute()
+                    rows = res.data or []
+                except Exception:
+                    # 2. Fallback: baca dari tabel ai_provider_config baris 'learned_synonyms'
+                    res = supabase.table(config.AI_CONFIG_TABLE).select("system_prompt_extra").eq("id", "learned_synonyms").limit(1).execute()
+                    rows = []
+                    if res.data and res.data[0].get("system_prompt_extra"):
+                        rows = json.loads(res.data[0]["system_prompt_extra"])
+
+                new_cache = {}
+                for r in rows:
+                    slang = str(r.get("slang_word") or "").strip().lower()
+                    canonical = str(r.get("canonical_word") or "").strip().lower()
+                    if slang and canonical:
+                        new_cache[slang] = canonical
+
+                self._learned_cache = new_cache
+                self._items_metadata = rows
+                self._last_synced = now
+            except Exception as exc:
+                logger.debug("Synonym sync skipped: %s", exc)
+
+    def get_all_synonyms(self, supabase: Optional[Client] = None) -> dict[str, str]:
+        if supabase:
+            self.sync_from_db(supabase)
+        with self._lock:
+            merged = dict(SEED_SLANG_MAP)
+            merged.update(self._learned_cache)
+            return merged
+
+    def get_learned_list(self, supabase: Optional[Client] = None) -> list[dict]:
+        if supabase:
+            self.sync_from_db(supabase)
+        with self._lock:
+            return list(self._items_metadata)
+
+    def record_learned_term(
+        self,
+        supabase: Client,
+        slang_word: str,
+        canonical_word: str,
+        source: str = "auto_chat"
+    ) -> bool:
+        slang = slang_word.strip().lower()
+        canonical = canonical_word.strip().lower()
+        if not slang or not canonical or len(slang) < 2 or slang == canonical:
+            return False
+        if slang in ID_STOPWORDS or slang in CHAT_FILLERS:
+            return False
+
+        with self._lock:
+            self._learned_cache[slang] = canonical
+
+            # Simpan ke Supabase
+            try:
+                try:
+                    supabase.table("ai_learned_synonyms").upsert({
+                        "slang_word": slang,
+                        "canonical_word": canonical,
+                        "source": source,
+                        "updated_at": datetime.now(timezone.utc).isoformat()
+                    }, on_conflict="slang_word").execute()
+                except Exception:
+                    existing = list(self._items_metadata)
+                    found = False
+                    for item in existing:
+                        if item.get("slang_word") == slang:
+                            item["canonical_word"] = canonical
+                            item["occurrences"] = item.get("occurrences", 1) + 1
+                            item["updated_at"] = datetime.now(timezone.utc).isoformat()
+                            found = True
+                            break
+                    if not found:
+                        existing.append({
+                            "slang_word": slang,
+                            "canonical_word": canonical,
+                            "occurrences": 1,
+                            "source": source,
+                            "learned_at": datetime.now(timezone.utc).isoformat(),
+                            "updated_at": datetime.now(timezone.utc).isoformat()
+                        })
+                    self._items_metadata = existing
+                    supabase.table(config.AI_CONFIG_TABLE).upsert({
+                        "id": "learned_synonyms",
+                        "enabled": True,
+                        "model": "auto-smart-v1",
+                        "system_prompt_extra": json.dumps(existing),
+                        "priority": 99
+                    }).execute()
+                return True
+            except Exception as exc:
+                logger.warning("Failed to persist learned synonym: %s", exc)
+                return False
+
+    def delete_learned_term(self, supabase: Client, slang_word: str) -> bool:
+        slang = slang_word.strip().lower()
+        with self._lock:
+            self._learned_cache.pop(slang, None)
+            try:
+                try:
+                    supabase.table("ai_learned_synonyms").delete().eq("slang_word", slang).execute()
+                except Exception:
+                    existing = [it for it in self._items_metadata if it.get("slang_word") != slang]
+                    self._items_metadata = existing
+                    supabase.table(config.AI_CONFIG_TABLE).upsert({
+                        "id": "learned_synonyms",
+                        "enabled": True,
+                        "model": "auto-smart-v1",
+                        "system_prompt_extra": json.dumps(existing),
+                        "priority": 99
+                    }).execute()
+                return True
+            except Exception as exc:
+                logger.warning("Failed to delete learned synonym: %s", exc)
+                return False
+
+
+def get_synonyms_registry() -> LearnedSynonymsRegistry:
+    return LearnedSynonymsRegistry.get_instance()
+
+
+def reformulate_with_llm(question: str) -> dict:
+    """
+    Gunakan LLM ultra-cepat (Gemini 3.5 Flash-Lite) untuk mendekonstruksi pertanyaan dengan bahasa gaul
+    atau bahasa daerah baru menjadi format baku dan mendeteksi kosakata baru.
+    """
+    if not question:
+        return {"canonical_query": "", "search_keywords": [], "new_slang_detected": []}
+
+    try:
+        from ai.generation import get_provider_manager, _call_gemini
+        manager = get_provider_manager()
+        gemini_provider = manager.get_provider("gemini")
+        if not gemini_provider:
+            return {"canonical_query": question, "search_keywords": [], "new_slang_detected": []}
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Anda adalah modul analisis bahasa untuk sistem pencarian dokumen AI sekolah SMP Negeri 2 Cibungbulang.\n"
+                    "Tugas:\n"
+                    "1. Ubah maksud pertanyaan pengguna ke dalam bahasa Indonesia baku formal yang cocok untuk pencarian dokumen sekolah.\n"
+                    "2. Berikan daftar 2-4 kata kunci pencarian penting.\n"
+                    "3. Jika ada kata gaul/singkatan/bahasa daerah baru yang bukan bahasa baku, identifikasi setiap kata per kata tunggal (jangan menggabungkan kata filler/partikel).\n\n"
+                    "Keluarkan HANYA format JSON valid berikut:\n"
+                    "{\n"
+                    "  \"canonical_query\": \"...\",\n"
+                    "  \"search_keywords\": [\"...\"],\n"
+                    "  \"new_slang_detected\": [{\"slang\": \"...\", \"canonical\": \"...\"}]\n"
+                    "}"
+                ),
+            },
+            {"role": "user", "content": f"Pertanyaan pengguna: \"{question}\""}
+        ]
+
+        raw_text, _ = _call_gemini(gemini_provider, messages)
+        raw_text = raw_text.strip()
+        if raw_text.startswith("```"):
+            raw_text = re.sub(r"^```[a-zA-Z]*\n?", "", raw_text)
+            raw_text = re.sub(r"\n?```$", "", raw_text).strip()
+
+        data = json.loads(raw_text)
+        return {
+            "canonical_query": str(data.get("canonical_query") or question).strip(),
+            "search_keywords": [str(k).strip() for k in data.get("search_keywords", []) if str(k).strip()],
+            "new_slang_detected": data.get("new_slang_detected") or []
+        }
+    except Exception as exc:
+        logger.debug("LLM reformulation skipped: %s", exc)
+        return {"canonical_query": question, "search_keywords": [], "new_slang_detected": []}
+
+
+def auto_extract_and_learn_synonyms(
+    supabase: Client,
+    question: str,
+    docs: list[dict],
+    answer: str,
+    evidence: dict,
+    new_terms: list[dict] = None
+) -> None:
+    """Secara otomatis mencatat kosakata gaul/daerah baru yang terbukti berhasil menghasilkan jawaban akurat."""
+    if not supabase or not question or not docs:
+        return
+    if not evidence.get("supported"):
+        return
+
+    registry = LearnedSynonymsRegistry.get_instance()
+    if new_terms:
+        for t in new_terms:
+            slang = str(t.get("slang") or t.get("slang_word") or "").strip().lower()
+            canonical = str(t.get("canonical") or t.get("canonical_word") or "").strip().lower()
+            if slang and canonical:
+                registry.record_learned_term(supabase, slang, canonical, source="auto_chat")
+                # Jika slang berbentuk gabungan frasa (mis. 'cik saha'), ekstrak kata inti non-filler ('saha')
+                if " " in slang:
+                    for p in slang.split():
+                        if p not in CHAT_FILLERS and p not in ID_STOPWORDS:
+                            registry.record_learned_term(supabase, p, canonical, source="auto_chat")
+
+
+
+
 
 
 def extract_class_tokens(text: str) -> list[str]:
@@ -410,15 +650,23 @@ def extract_class_tokens(text: str) -> list[str]:
     return list(dict.fromkeys(results))
 
 
-def normalize_informal_query(query: str) -> str:
+def normalize_informal_query(query: str, supabase: Optional[Client] = None) -> str:
     """Normalisasi pertanyaan gaul / informal menjadi teks pencarian semantik bersih."""
     if not query:
         return ""
+    active_synonyms = LearnedSynonymsRegistry.get_instance().get_all_synonyms(supabase)
     cleaned = re.sub(r"[\?\!\.,;:]+", " ", query.lower()).strip()
+
+    # 1. Ganti frasa multi-kata terlebih dahulu (diurutkan dari yang paling panjang)
+    multi_word_keys = sorted([k for k in active_synonyms if " " in k], key=len, reverse=True)
+    for phrase in multi_word_keys:
+        val = active_synonyms[phrase]
+        cleaned = re.sub(rf"\b{re.escape(phrase)}\b", f" {val} ", cleaned)
+
     words_list = cleaned.split()
     mapped = []
     for w in words_list:
-        w_clean = SLANG_MAP.get(w, w)
+        w_clean = active_synonyms.get(w, w)
         if w_clean and w_clean not in CHAT_FILLERS:
             mapped.append(w_clean)
     res = " ".join(mapped).strip()
@@ -434,10 +682,11 @@ def _strip_id_affixes(word: str) -> str:
     return w
 
 
-def _extract_search_candidates(query: str) -> list[str]:
+def _extract_search_candidates(query: str, supabase: Optional[Client] = None) -> list[str]:
     """Ekstrak beberapa kombinasi kata kunci bertingkat dari pertanyaan dengan prioritas entitas dan kelas."""
     ql = query.lower()
     candidates: list[str] = []
+    active_synonyms = LearnedSynonymsRegistry.get_instance().get_all_synonyms(supabase)
 
     # 1. Deteksi nomor kelas (Arab & Romawi: 9.5 <-> IX-5)
     class_tokens = extract_class_tokens(query)
@@ -449,7 +698,7 @@ def _extract_search_candidates(query: str) -> list[str]:
     # 2. Deteksi entitas kunci sekolah
     for ent in KEY_ENTITIES:
         if ent in ql:
-            canonical_ent = SLANG_MAP.get(ent, ent)
+            canonical_ent = active_synonyms.get(ent, ent)
             candidates.append(canonical_ent)
             if ent in ("telepon", "telp"):
                 candidates.extend(["telp", "telepon"])
@@ -457,13 +706,13 @@ def _extract_search_candidates(query: str) -> list[str]:
                 candidates.extend(["ekstrakurikuler", "ekskul"])
 
     # 3. Query normalisasi (slang diganti, filler dibersihkan)
-    normalized = normalize_informal_query(query)
+    normalized = normalize_informal_query(query, supabase)
     if normalized and normalized != ql:
         candidates.append(normalized)
 
     # 4. Tokenisasi kata & pemetaan kata bermakna
     tokens = re.findall(r"[a-zA-Z0-9]+", ql)
-    mapped_tokens = [SLANG_MAP.get(t, t) for t in tokens if t]
+    mapped_tokens = [active_synonyms.get(t, t) for t in tokens if t]
     meaningful = [t for t in mapped_tokens if t and t not in ID_STOPWORDS]
     stemmed = [_strip_id_affixes(t) for t in meaningful]
 

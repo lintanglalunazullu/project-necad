@@ -619,6 +619,59 @@ class TestInformalLanguageAndClassTokens:
 
 
 
+class TestLearnedSynonymsAndAutonomousLearning:
+    def test_registry_in_memory_record_and_get(self):
+        from ai.retrieval import get_synonyms_registry, normalize_informal_query
+        from unittest.mock import MagicMock
+
+        registry = get_synonyms_registry()
+        mock_sb = MagicMock()
+        # Mock supabase call to avoid network
+        mock_sb.table.return_value.upsert.return_value.execute.return_value = MagicMock(data=[])
+
+        ok = registry.record_learned_term(mock_sb, "saha", "siapa", source="unit_test")
+        assert ok is True
+
+        synonyms = registry.get_all_synonyms()
+        assert synonyms.get("saha") == "siapa"
+
+        # Verify normalize_informal_query uses the learned term
+        normalized = normalize_informal_query("cik saha guru fisika")
+        assert "siapa" in normalized
+
+        # Clean up
+        mock_sb.table.return_value.delete.return_value.eq.return_value.execute.return_value = MagicMock(data=[])
+        del_ok = registry.delete_learned_term(mock_sb, "saha")
+        assert del_ok is True
+
+    def test_auto_extract_and_learn_synonyms(self):
+        from ai.retrieval import auto_extract_and_learn_synonyms, get_synonyms_registry
+        from unittest.mock import MagicMock
+
+        registry = get_synonyms_registry()
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.upsert.return_value.execute.return_value = MagicMock(data=[])
+
+        auto_extract_and_learn_synonyms(
+            supabase=mock_sb,
+            question="kumaha atuh carana",
+            docs=[{"content": "Tata cara pendaftaran"}],
+            answer="Berikut caranya...",
+            evidence={"supported": True, "score": 0.95},
+            new_terms=[{"slang": "kumaha", "canonical": "bagaimana"}]
+        )
+
+        assert registry.get_all_synonyms().get("kumaha") == "bagaimana"
+        registry.delete_learned_term(mock_sb, "kumaha")
+
+    def test_admin_learned_synonyms_unauthorized(self):
+        from fastapi.testclient import TestClient
+        from app import app
+        client = TestClient(app)
+        res = client.get("/admin/ai/learned-synonyms")
+        assert res.status_code == 401
+
+
 if __name__ == "__main__":
     # Jalankan langsung: python test_app.py
     import subprocess

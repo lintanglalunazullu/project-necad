@@ -582,7 +582,7 @@ class TestPortalShortcuts:
         # /teacher redirects
         res_teacher = client.get("/teacher", follow_redirects=False)
         assert res_teacher.status_code == 302
-        assert res_teacher.headers["location"] == "/mentor/teacher/"
+        assert res_teacher.headers["location"] == "/mentor/teacher/chat.html"
 
 
 if __name__ == "__main__":

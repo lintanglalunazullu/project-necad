@@ -144,41 +144,41 @@ async def redirect_mentor():
 
 
 # ======================= PORTAL ROUTE SHORTCUTS =======================
-@app.get("/login", include_in_schema=False)
-@app.get("/login.html", include_in_schema=False)
+@app.api_route("/login", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/login.html", methods=["GET", "HEAD"], include_in_schema=False)
 async def redirect_login():
     """Redirect /login dan /login.html langsung ke portal login."""
     return RedirectResponse(url="/mentor/login.html", status_code=302)
 
 
-@app.get("/mentor/login", include_in_schema=False)
+@app.api_route("/mentor/login", methods=["GET", "HEAD"], include_in_schema=False)
 async def redirect_mentor_login():
     """Redirect /mentor/login ke /mentor/login.html."""
     return RedirectResponse(url="/mentor/login.html", status_code=302)
 
 
-@app.get("/admin", include_in_schema=False)
-@app.get("/admin/", include_in_schema=False)
+@app.api_route("/admin", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/admin/", methods=["GET", "HEAD"], include_in_schema=False)
 async def redirect_admin():
     """Redirect /admin dan /admin/ langsung ke portal admin."""
     return RedirectResponse(url="/mentor/admin/", status_code=302)
 
 
-@app.get("/admin/{page:path}", include_in_schema=False)
+@app.api_route("/admin/{page:path}", methods=["GET", "HEAD"], include_in_schema=False)
 async def redirect_admin_subpaths(page: str):
     """Redirect subpath admin (misal /admin/login atau /admin/login.html) ke /mentor/admin/."""
     target = page if ("." in page or page.endswith("/")) else f"{page}.html"
     return RedirectResponse(url=f"/mentor/admin/{target}", status_code=302)
 
 
-@app.get("/teacher", include_in_schema=False)
-@app.get("/teacher/", include_in_schema=False)
+@app.api_route("/teacher", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/teacher/", methods=["GET", "HEAD"], include_in_schema=False)
 async def redirect_teacher():
-    """Redirect /teacher dan /teacher/ langsung ke portal teacher."""
-    return RedirectResponse(url="/mentor/teacher/", status_code=302)
+    """Redirect /teacher dan /teacher/ langsung ke portal teacher (chat.html)."""
+    return RedirectResponse(url="/mentor/teacher/chat.html", status_code=302)
 
 
-@app.get("/teacher/{page:path}", include_in_schema=False)
+@app.api_route("/teacher/{page:path}", methods=["GET", "HEAD"], include_in_schema=False)
 async def redirect_teacher_subpaths(page: str):
     """Redirect subpath teacher ke /mentor/teacher/."""
     target = page if ("." in page or page.endswith("/")) else f"{page}.html"

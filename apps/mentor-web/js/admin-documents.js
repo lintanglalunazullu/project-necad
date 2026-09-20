@@ -73,7 +73,7 @@
 
   function render() {
     table.clear().rows.add(documents.map((item) => [
-      `<div class="font-semibold text-white">${escapeHtml(item.pdf_name || item.name || 'Tanpa nama')}</div><div class="mt-1 text-xs text-slate-500">ID: ${escapeHtml(item.id || '-')}</div>`,
+      `<div class="font-semibold text-purple-400 cursor-pointer hover:underline" data-view-id="${escapeHtml(item.id)}">${escapeHtml(item.pdf_name || item.name || 'Tanpa nama')}</div><div class="mt-1 text-xs text-slate-500">ID: ${escapeHtml(item.id || '-')}</div>`,
       `<span class="rounded-full ${String(item.category || 'public').toLowerCase() === 'private' ? 'bg-amber-500/15 text-amber-300' : 'bg-sky-500/15 text-sky-300'} px-2.5 py-1 text-xs font-semibold">${escapeHtml(item.category || 'public')}</span>`,
       escapeHtml(item.chunk_count ?? item.chunks ?? '-'),
       formatDate(item.created_at || item.inserted_at),
@@ -166,8 +166,16 @@
   document.querySelector('#documentsTable tbody').addEventListener('click', (event) => {
     const editButton = event.target.closest('[data-edit-id]');
     const deleteButton = event.target.closest('[data-delete-id]');
+    const viewButton = event.target.closest('[data-view-id]');
+    
     if (editButton) openModal(documents.find((item) => String(item.id) === editButton.dataset.editId));
     if (deleteButton) deleteDocument(documents.find((item) => String(item.id) === deleteButton.dataset.deleteId));
+    if (viewButton) {
+      const doc = documents.find((item) => String(item.id) === viewButton.dataset.viewId);
+      if (doc) {
+        alert(`INFO DOKUMEN\n\nNama: ${doc.pdf_name || doc.name}\nKategori: ${doc.category}\nChunks: ${doc.chunk_count || doc.chunks}\n\nCatatan: Aplikasi ini berarsitektur RAG (Retrieval-Augmented Generation) di mana file PDF asli TIDAK disimpan ke server demi efisiensi dan keamanan. Sistem hanya mengekstrak dan menyimpan potongan teks pintar (Vektor Chunks) sehingga Anda tidak dapat mengunduh atau melihat ulang PDF utuh dari sini.`);
+      }
+    }
   });
 
   lucide.createIcons();

@@ -9,7 +9,7 @@ from supabase import Client
 from auth import authenticated_user
 from models import DocumentRenameRequest, EmbedUpsertRequest
 from ai.embedding import embed_text, validate_embedding
-from ai.retrieval import fetch_document_rows, document_summary
+from ai.retrieval import fetch_document_summary
 from utils.helpers import extract_response_parts
 import config
 
@@ -29,12 +29,15 @@ async def list_documents(authorization: Optional[str] = Header(default=None)):
     Ambil daftar dokumen.
     - Admin & Teacher: bisa lihat semua (public + private)
     - User biasa: hanya public
+
+    Sebelumnya endpoint ini fetch SEMUA chunk (limit 10000) lalu group-by pdf_name
+    di Python. Sekarang pakai RPC get_document_summary yang sudah GROUP BY di
+    database — 1 baris per dokumen dikirim lewat network, bukan 1 baris per chunk.
     """
     supabase = _get_supabase()
     _, role = authenticated_user(supabase, authorization)
 
-    rows = fetch_document_rows(supabase)
-    docs = document_summary(rows)
+    docs = fetch_document_summary(supabase)
 
     if role not in {"admin", "teacher"}:
         docs = [d for d in docs if str(d.get("category") or "public").lower() == "public"]
@@ -58,12 +61,33 @@ async def rename_document(
     if not new_name:
         raise HTTPException(400, "name is required")
 
-    rows = fetch_document_rows(supabase)
-    names = {str(r.get("pdf_name") or "").strip() for r in rows}
-    if document_id not in names:
+    # Cek keberadaan & bentrokan nama dengan query terarah (bukan fetch semua chunk).
+    exists_res = (
+        supabase.table(config.SUPABASE_TABLE)
+        .select("pdf_name")
+        .eq("pdf_name", document_id)
+        .limit(1)
+        .execute()
+    )
+    parts = extract_response_parts(exists_res)
+    if parts["error"]:
+        raise HTTPException(500, str(parts["error"]))
+    if not (parts["data"] or []):
         raise HTTPException(404, "document not found")
-    if new_name != document_id and new_name in names:
-        raise HTTPException(409, "document name already exists")
+
+    if new_name != document_id:
+        collision_res = (
+            supabase.table(config.SUPABASE_TABLE)
+            .select("pdf_name")
+            .eq("pdf_name", new_name)
+            .limit(1)
+            .execute()
+        )
+        collision_parts = extract_response_parts(collision_res)
+        if collision_parts["error"]:
+            raise HTTPException(500, str(collision_parts["error"]))
+        if collision_parts["data"]:
+            raise HTTPException(409, "document name already exists")
 
     payload: dict = {"pdf_name": new_name}
     if body.category is not None:
@@ -93,9 +117,12 @@ async def delete_document(
     if role != "admin":
         raise HTTPException(403, "Admin role diperlukan untuk menghapus dokumen")
 
-    rows = fetch_document_rows(supabase)
-    names = {str(r.get("pdf_name") or "").strip() for r in rows}
-    if document_id not in names:
+    from utils.helpers import extract_response_parts
+    res = supabase.table(config.SUPABASE_TABLE).select("pdf_name").eq("pdf_name", document_id).limit(1).execute()
+    parts = extract_response_parts(res)
+    if parts["error"]:
+        raise HTTPException(500, str(parts["error"]))
+    if not parts["data"]:
         raise HTTPException(404, "document not found")
 
     response = (
@@ -133,10 +160,18 @@ async def embed_upsert(
         content = chunk.text.strip()
         if not content:
             raise HTTPException(400, "content tidak boleh kosong")
+        pdf_name = chunk.pdf_name or None
+        cat = chunk.category
+        if (not cat or str(cat).lower() == "public") and pdf_name:
+            from ai.retrieval import infer_document_category
+            inferred = infer_document_category(pdf_name)
+            if inferred != "public":
+                cat = inferred
+
         row: dict = {
             "content": content,
-            "pdf_name": chunk.pdf_name or None,
-            "category": chunk.category,
+            "pdf_name": pdf_name,
+            "category": cat or "public",
         }
         if chunk.metadata is not None and config.SUPABASE_USE_METADATA:
             row[config.SUPABASE_METADATA_COLUMN] = chunk.metadata

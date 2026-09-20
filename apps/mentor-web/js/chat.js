@@ -22,12 +22,14 @@ let currentSessionId = null;
 let currentSessionTitle = DEFAULT_SESSION_TITLE;
 let currentUserId = null;
 const CHAT_CONTEXT = document.body.dataset.role || 'user';
+let isCreatingNewSession = false;
 
 function getSessionStorageKey() {
     return `aksaraku_chat_session_id_${CHAT_CONTEXT}_${currentUserId}`;
 }
 
 const BACKEND_CHAT_URL = `${window.AKSARAKU_CONFIG.API_BASE_URL}/chat`;
+const BACKEND_CHAT_STREAM_URL = `${window.AKSARAKU_CONFIG.API_BASE_URL}/chat/stream`;
 
 // Enable / disable send button based on input content
 function autosizeChatInput() {
@@ -106,13 +108,49 @@ async function loadSessionList() {
 
     sessionList.innerHTML = '';
     data.forEach((session) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex items-center gap-2 w-full mb-1 group';
+
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = 'w-full text-left rounded-xl border border-white/5 bg-[#111827] px-3 py-2 text-xs text-[#D1D5DB] hover:border-purple-500/40 hover:bg-white/5 transition-colors';
+        const isActive = (session.id === currentSessionId);
+        
+        button.className = `flex-1 text-left rounded-xl border px-3 py-2 text-xs truncate transition-colors ${
+            isActive 
+                ? 'bg-white/10 border-purple-500/50 text-white shadow-sm' 
+                : 'border-white/5 bg-[#111827] text-[#D1D5DB] hover:border-purple-500/40 hover:bg-white/5'
+        }`;
+        
         button.textContent = session.title || 'Sesi chat baru';
+        button.title = session.title || 'Sesi chat baru';
         button.addEventListener('click', () => switchChatSession(session.id));
-        sessionList.appendChild(button);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.title = 'Hapus riwayat ini';
+        deleteBtn.className = 'text-[#6B7280] hover:text-red-400 p-1.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity';
+        deleteBtn.innerHTML = '<i data-lucide="trash-2" class="w-3.5 h-3.5"></i>';
+        deleteBtn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            if (confirm('Hapus sesi chat ini?')) {
+                await supabaseClient.from(CHAT_SESSIONS_TABLE).delete().eq('id', session.id);
+                if (currentSessionId === session.id) {
+                    currentSessionId = null;
+                    localStorage.removeItem(getSessionStorageKey());
+                    clearChatThread();
+                }
+                loadSessionList();
+            }
+        });
+
+        wrapper.appendChild(button);
+        wrapper.appendChild(deleteBtn);
+        sessionList.appendChild(wrapper);
     });
+    
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
 }
 
 async function createChatSession(title = DEFAULT_SESSION_TITLE) {
@@ -195,6 +233,15 @@ async function ensureChatSession() {
     if (!session?.user) return null;
 
     currentUserId = session.user.id;
+    
+    if (isCreatingNewSession || !currentSessionId) {
+        isCreatingNewSession = false;
+        const storedSessionId = localStorage.getItem(getSessionStorageKey());
+        if (!storedSessionId) {
+            return createChatSession();
+        }
+    }
+    
     return getCurrentSessionId();
 }
 
@@ -260,8 +307,10 @@ async function switchChatSession(sessionId) {
     if (!sessionId || sessionId === currentSessionId) return;
 
     currentSessionId = sessionId;
+    isCreatingNewSession = false;
     localStorage.setItem(getSessionStorageKey(), sessionId);
     clearChatThread();
+    await loadSessionList(); // Update UI active highlight
     await loadSessionMessages(sessionId);
     renderSessionStatus('Riwayat sesi dimuat.');
 }
@@ -270,7 +319,18 @@ async function loadSessionMessages(sessionId) {
     const messages = await loadChatMessages(sessionId);
     if (!messages.length) return;
 
-    messages.forEach((msg) => {
+    // Deduplikasi pesan kembar berurutan (mencegah pesan ganda saat refresh)
+    const deduped = [];
+    for (let i = 0; i < messages.length; i++) {
+        const current = messages[i];
+        const prev = deduped[deduped.length - 1];
+        if (prev && prev.role === current.role && (prev.content || "").trim() === (current.content || "").trim()) {
+            continue; // Lewati pesan duplikat
+        }
+        deduped.push(current);
+    }
+
+    deduped.forEach((msg) => {
         if (msg.role === 'user') {
             appendUserMessage(msg.content);
         } else {
@@ -418,50 +478,79 @@ function removeAccuracyNotice(text) {
         .trim();
 }
 
-function truncateText(text, maxChars = 320) {
+function truncateText(text, maxChars = 140) {
     if (!text) return "";
     return text.length <= maxChars ? text : `${text.slice(0, maxChars).trim()}…`;
 }
 
 function createSourcesHtml(sources) {
     if (!Array.isArray(sources) || sources.length === 0) {
-        return `<p class="text-sm text-[#9CA3AF]">Tidak ada dokumen relevan ditemukan.</p>`;
+        return "";
     }
 
-    return sources
-        .map((source) => {
-            const fileName = source.pdf_name || source.file_name || "Nama dokumen tidak tersedia";
-            const accuracy = source.akurasi != null ? `Akurasi: ${source.akurasi}` : "";
-            const snippet = truncateText(source.content || source.snippet || "Tidak ada cuplikan tersedia.");
+    // Kelompokkan dan deduplikasi sumber berdasarkan nama file agar rapi dan ringkas
+    const fileMap = new Map();
+    sources.forEach((source) => {
+        const rawName = source.pdf_name || source.file_name || "Dokumen Referensi";
+        const cleanName = rawName.replace(/[-_]/g, " ").replace(/\.pdf$/i, "").trim();
+        const displayName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
 
-            return `
-                <div class="rounded-xl border border-white/10 bg-[#111827] p-4 space-y-2">
-                    <div class="flex items-center justify-between gap-3 text-xs text-[#9CA3AF]">
-                        <span class="font-semibold text-white">File: ${escapeChatHtml(fileName)}</span>
-                        <span>${escapeChatHtml(accuracy)}</span>
-                    </div>
-                    <p class="text-xs text-[#9CA3AF] leading-relaxed">${renderChatMarkdown(snippet)}</p>
-                </div>
-            `;
-        })
-        .join("");
+        if (!fileMap.has(rawName)) {
+            fileMap.set(rawName, {
+                rawName,
+                displayName,
+                snippets: [],
+            });
+        }
+        const snippet = (source.content || source.snippet || "").trim();
+        if (snippet && fileMap.get(rawName).snippets.length < 2) {
+            fileMap.get(rawName).snippets.push(truncateText(snippet, 120));
+        }
+    });
+
+    const fileList = Array.from(fileMap.values()).slice(0, 3);
+    if (fileList.length === 0) return "";
+
+    return `
+      <details class="group mt-3 border border-white/10 rounded-xl bg-[#111827]/70 overflow-hidden text-xs transition-all duration-200">
+        <summary class="flex items-center justify-between px-3.5 py-2 cursor-pointer select-none text-slate-300 hover:text-white hover:bg-white/5 transition-colors">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-purple-400 font-semibold text-[11px] uppercase tracking-wider">📚 Sumber Referensi:</span>
+            <span class="text-slate-200 font-medium">${fileList.map(f => escapeChatHtml(f.displayName)).join(", ")}</span>
+          </div>
+          <svg class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 group-open:rotate-180 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </summary>
+        <div class="p-3 border-t border-white/5 space-y-2 bg-[#0B0F17]/60">
+          ${fileList.map(f => `
+            <div class="p-2.5 rounded-lg bg-white/5 border border-white/5 space-y-1">
+              <div class="flex items-center gap-1.5 font-medium text-purple-300 text-xs">
+                <span>📄 ${escapeChatHtml(f.displayName)}</span>
+              </div>
+              ${f.snippets.map(snip => `
+                <p class="text-[11px] text-slate-400 leading-relaxed italic">"${escapeChatHtml(snip)}"</p>
+              `).join("")}
+            </div>
+          `).join("")}
+        </div>
+      </details>
+    `;
 }
 
 function appendAiReplyWithSources(answer, sources) {
     const wrapper = document.createElement("div");
     wrapper.className = "flex items-start gap-3 animate-fadeUp";
+    const sourcesHtml = createSourcesHtml(sources);
     wrapper.innerHTML = `
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-purple-900/30">
         <img src="../image/logo.png" alt="Aksaraku" class="h-5 w-5 object-contain" />
       </div>
-    <div class="ai-reply-bubble bg-bubbleAi border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5 max-w-[85%] space-y-4">
+      <div class="ai-reply-bubble bg-bubbleAi border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5 max-w-[85%] space-y-2">
         <div>
           <p class="text-sm leading-relaxed text-[#F3F4F6] whitespace-pre-wrap"></p>
         </div>
-        <div class="space-y-3">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-[#9CA3AF]">Sumber dokumen</p>
-          <div class="grid gap-3">${createSourcesHtml(sources)}</div>
-        </div>
+        ${sourcesHtml ? `<div class="sources-container">${sourcesHtml}</div>` : ''}
       </div>
     `;
 
@@ -469,6 +558,47 @@ function appendAiReplyWithSources(answer, sources) {
     threadInner.appendChild(wrapper);
     lucide.createIcons();
     return wrapper;
+}
+
+function createStreamingAiReplyBubble() {
+    const wrapper = document.createElement("div");
+    wrapper.className = "flex items-start gap-3 animate-fadeUp";
+    wrapper.innerHTML = `
+      <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-purple-900/30">
+        <img src="../image/logo.png" alt="Aksaraku" class="h-5 w-5 object-contain" />
+      </div>
+      <div class="ai-reply-bubble bg-bubbleAi border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5 max-w-[85%] space-y-2">
+        <div class="ai-text-container">
+          <p class="text-sm leading-relaxed text-[#F3F4F6] whitespace-pre-wrap"><span class="inline-block w-2 h-4 bg-purple-400 animate-pulse align-middle ml-1"></span></p>
+        </div>
+        <div class="sources-container hidden"></div>
+      </div>
+    `;
+    threadInner.appendChild(wrapper);
+    lucide.createIcons();
+    const textEl = wrapper.querySelector(".ai-text-container p");
+    const sourcesContainer = wrapper.querySelector(".sources-container");
+    return {
+        wrapper,
+        updateText: (rawText) => {
+            textEl.innerHTML = renderChatMarkdown(removeAccuracyNotice(rawText)) + '<span class="inline-block w-1.5 h-3.5 bg-purple-400 animate-pulse align-middle ml-1"></span>';
+        },
+        finalize: (rawText, sources = []) => {
+            textEl.innerHTML = renderChatMarkdown(removeAccuracyNotice(rawText));
+            const claimsNoInfo = /tidak\s+(ditemukan|ada|terdapat|tercantum|disebutkan|tersedia|memuat)/i.test(rawText);
+            if (!claimsNoInfo && Array.isArray(sources) && sources.length > 0) {
+                const html = createSourcesHtml(sources);
+                if (html) {
+                    sourcesContainer.innerHTML = html;
+                    sourcesContainer.classList.remove("hidden");
+                } else {
+                    sourcesContainer.classList.add("hidden");
+                }
+            } else {
+                sourcesContainer.classList.add("hidden");
+            }
+        }
+    };
 }
 
 async function fetchChatResponse(question) {
@@ -512,7 +642,7 @@ async function handleSend(text) {
   const sessionId = await ensureChatSession();
   appendUserMessage(trimmed);
   if (sessionId) {
-    await saveChatMessage(sessionId, 'user', trimmed);
+    // Backend /chat dan /chat/stream sudah otomatis menyimpan pesan user & assistant ke Supabase.
     await updateSessionTitleFromMessage(sessionId, trimmed);
   }
 
@@ -524,22 +654,98 @@ async function handleSend(text) {
   const typing = appendTypingIndicator();
   scrollToBottom();
 
+  const session = await getSupabaseSession();
+  const headers = { "Content-Type": "application/json" };
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+
+  let streamBubble = null;
+  let accumulatedText = "";
+  let receivedSources = [];
+
   try {
-    const { answer, sources } = await fetchChatResponse(trimmed);
+    const response = await fetch(BACKEND_CHAT_STREAM_URL, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ question: trimmed, session_id: sessionId }),
+    });
+
+    if (!response.ok || !response.body) {
+      throw new Error("Streaming tidak aktif, mencoba mode reguler...");
+    }
+
     typing.remove();
-    const includeSources = userAskedForSources(trimmed) && sources.length > 0;
-    if (includeSources) {
-      appendAiReplyWithSources(answer, sources);
-    } else {
-      appendAiReply(answer);
+    streamBubble = createStreamingAiReplyBubble();
+    scrollToBottom();
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || "";
+
+      for (const ev of events) {
+        if (!ev.trim()) continue;
+        const lines = ev.split("\n");
+        let eventType = "message";
+        let dataStr = "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: ")) {
+            eventType = line.slice(7).trim();
+          } else if (line.startsWith("data: ")) {
+            dataStr = line.slice(6).trim();
+          }
+        }
+
+        if (eventType === "token" && dataStr) {
+          try {
+            const data = JSON.parse(dataStr);
+            accumulatedText += data.text || "";
+            streamBubble.updateText(accumulatedText);
+            scrollToBottom();
+          } catch (e) {}
+        } else if (eventType === "metadata" && dataStr) {
+          try {
+            const data = JSON.parse(dataStr);
+            if (Array.isArray(data.sources)) {
+              receivedSources = data.sources;
+            }
+          } catch (e) {}
+        }
+      }
     }
-    if (sessionId) {
-      await saveChatMessage(sessionId, 'assistant', answer);
-    }
+
+    const claimsNoInfo = /tidak\s+(ditemukan|ada|terdapat|tercantum|disebutkan|tersedia|memuat)/i.test(accumulatedText);
+    const showSources = !claimsNoInfo && receivedSources.length > 0;
+    streamBubble.finalize(accumulatedText, showSources ? receivedSources : []);
+    scrollToBottom();
   } catch (error) {
-    typing.remove();
-    console.error(error);
-    appendAiReply("Maaf, terjadi kesalahan saat memproses request: " + (error.message || "Unknown error"));
+    if (typing && typing.parentNode) typing.remove();
+    if (!accumulatedText) {
+      try {
+        const { answer, sources } = await fetchChatResponse(trimmed);
+        const claimsNoInfo = /tidak\s+(ditemukan|ada|terdapat|tercantum|disebutkan|tersedia|memuat)/i.test(answer);
+        const includeSources = !claimsNoInfo && sources.length > 0;
+        if (includeSources) {
+          appendAiReplyWithSources(answer, sources);
+        } else {
+          appendAiReply(answer);
+        }
+      } catch (fallbackErr) {
+        console.error(fallbackErr);
+        appendAiReply("Maaf, terjadi kesalahan saat memproses request: " + (fallbackErr.message || "Unknown error"));
+      }
+    } else {
+      console.error("Stream interrupted:", error);
+    }
   } finally {
     sendBtn.disabled = false;
     scrollToBottom();
@@ -564,10 +770,11 @@ document.querySelectorAll(".suggestion-pill").forEach((pill) => {
 document.getElementById("newResearchBtn").addEventListener("click", async () => {
     clearChatThread();
     currentSessionId = null;
+    isCreatingNewSession = true;
     localStorage.removeItem(getSessionStorageKey());
     renderSessionStatus('Sesi baru dibuat. Silakan mulai chat.');
-    await createChatSession('Sesi chat baru');
     chatInput.focus();
+    loadSessionList(); // Clear active highlight
 });
 
 async function initChatSessionHistoryWrapper() {

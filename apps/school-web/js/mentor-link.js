@@ -17,14 +17,19 @@
       return protocol + '//' + hostname + ':8081';
     }
 
-    // 2. Direct file opening (tanpa web server)
+    // 2. Vercel Single-Project Deployment
+    if (hostname.endsWith('.vercel.app')) {
+      return protocol + '//' + hostname + '/mentor';
+    }
+
+    // 3. Direct file opening (tanpa web server)
     if (protocol === 'file:' || !hostname) {
       return loc.pathname.indexOf('/pages/') !== -1
         ? '../../mentor-web/index.html'
         : '../mentor-web/index.html';
     }
 
-    // 3. Production server (Subdomain mentor)
+    // 4. Production server (Subdomain mentor)
     // Contoh: smpn2cibungbulang.sch.id -> https://mentor.smpn2cibungbulang.sch.id
     // www.smpn2cibungbulang.sch.id -> https://mentor.smpn2cibungbulang.sch.id
     var baseDomain = hostname.replace(/^(www|portal|web)\./i, '');

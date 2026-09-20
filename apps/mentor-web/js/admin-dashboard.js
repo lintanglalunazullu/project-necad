@@ -77,19 +77,19 @@
       return;
     }
     container.innerHTML = items.map((item) => `
-      <a href="./upload.html" class="group flex items-center gap-3 rounded-xl border border-slate-800 bg-card2 hover:border-purple-500/50 p-3 transition-colors">
+      <div onclick="alert('INFO DOKUMEN\\n\\nNama: ${escapeHtml(item.pdf_name || item.name)}\\nKategori: ${item.category}\\nChunks: ${item.chunk_count}\\n\\nCatatan: Berdasarkan arsitektur RAG, PDF asli tidak disimpan di server. Anda hanya dapat melihat informasi dasarnya saja.')" class="group flex items-center gap-3 rounded-xl border border-slate-800 bg-card2 hover:border-purple-500/50 p-3 transition-colors cursor-pointer">
         <div class="w-11 h-11 shrink-0 rounded-lg bg-purple-500/10 flex items-center justify-center">
           <i data-lucide="file-text" class="w-5 h-5 text-purple-400"></i>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold text-white">${escapeHtml(item.pdf_name || item.name)}</p>
+          <p class="truncate text-sm font-semibold text-purple-400 group-hover:underline">${escapeHtml(item.pdf_name || item.name)}</p>
           <p class="mt-0.5 text-xs text-[#6B7280]">${escapeHtml(item.chunk_count)} chunk
             <span class="mx-1.5">•</span>
             <span class="capitalize ${item.category === 'private' ? 'text-teal-400' : 'text-purple-400'}">${escapeHtml(item.category || 'public')}</span>
           </p>
         </div>
-        <i data-lucide="chevron-right" class="w-4 h-4 shrink-0 text-[#6B7280] group-hover:text-white transition-colors"></i>
-      </a>`).join('');
+        <i data-lucide="info" class="w-4 h-4 shrink-0 text-[#6B7280] group-hover:text-white transition-colors"></i>
+      </div>`).join('');
     lucide.createIcons();
   }
 

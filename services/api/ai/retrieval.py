@@ -1,6 +1,15 @@
 # services/api/ai/retrieval.py
 # Hybrid search pipeline: vector (Gemini embedding) + keyword + exact match
 # RRF (Reciprocal Rank Fusion) untuk merge hasil, reranking berdasarkan similarity + keyword overlap.
+#
+# CATATAN PERFORMA (migrasi lihat docs/migration_performance_and_security.sql):
+# Sebelumnya modul ini SELALU fetch seluruh tabel pdf_documents (termasuk kolom
+# embedding) untuk SETIAP pesan chat, lalu hitung cosine similarity di Python.
+# Sekarang RPC match_pdf_documents/search_pdf_documents_keyword/search_pdf_documents_exact
+# menerima parameter category_filter, jadi filtering role terjadi di Postgres
+# (pakai index HNSW + FTS yang sudah ada) untuk SEMUA role, termasuk "user" biasa.
+# Fetch-seluruh-tabel + cosine similarity di Python hanya dipakai sebagai FALLBACK
+# kalau RPC gagal (mis. koneksi database bermasalah).
 import logging
 import re
 from typing import Any
@@ -9,7 +18,7 @@ from supabase import Client
 
 import config
 from auth import allowed_categories, filter_documents_for_role, filter_rpc_documents_for_role
-from utils.helpers import words
+from utils.helpers import extract_response_parts, words
 
 logger = logging.getLogger("aksaraku.retrieval")
 
@@ -50,19 +59,21 @@ def reciprocal_rank_fusion(result_sets: list[list[dict]], k: int = 60) -> list[d
     return sorted(fused.values(), key=lambda x: x["rrf_score"], reverse=True)
 
 
-# ======================= DOCUMENT FETCH =======================
+# ======================= DOCUMENT FETCH (fallback / admin listing only) =======================
 
 def fetch_document_rows(supabase: Client) -> list[dict[str, Any]]:
     """
     Ambil semua baris dokumen dari Supabase.
-    Pilih kolom spesifik — bukan select("*") — untuk hemat bandwidth.
+    MAHAL — hanya dipakai untuk fallback saat RPC gagal, atau saat memang perlu
+    baris mentah (mis. shortcut "daftar dokumen apa saja" di chat.py). Untuk
+    ringkasan dokumen di admin/listing, pakai fetch_document_summary() di bawah,
+    yang GROUP BY di database, bukan di Python.
     """
     from fastapi import HTTPException
-    from utils.helpers import extract_response_parts
 
     response = (
         supabase.table(config.SUPABASE_TABLE)
-        .select("id, pdf_name, content, category, embedding, created_at, status")
+        .select("id, pdf_name, content, category, embedding, created_at")
         .limit(10000)
         .execute()
     )
@@ -103,7 +114,35 @@ def document_summary(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(docs.values())
 
 
-# ======================= SEARCH STRATEGIES =======================
+def fetch_document_summary(supabase: Client) -> list[dict[str, Any]]:
+    """
+    Ringkasan dokumen (1 baris per pdf_name) langsung dari database via RPC
+    get_document_summary (GROUP BY di Postgres). Jauh lebih murah daripada
+    fetch_document_rows() + document_summary() saat jumlah chunk besar.
+    Fallback otomatis ke cara lama kalau RPC belum ter-deploy.
+    """
+    try:
+        response = supabase.rpc("get_document_summary", {}).execute()
+        parts = extract_response_parts(response)
+        if not parts["error"] and parts["data"] is not None:
+            return [
+                {
+                    "id": row.get("pdf_name"),
+                    "name": row.get("pdf_name"),
+                    "pdf_name": row.get("pdf_name"),
+                    "chunk_count": row.get("chunk_count", 0),
+                    "created_at": row.get("created_at"),
+                    "status": "completed",
+                    "category": row.get("category") or "public",
+                }
+                for row in (parts["data"] or [])
+            ]
+    except Exception as exc:
+        logger.warning("get_document_summary RPC failed, fallback to full fetch: %s", exc)
+    return document_summary(fetch_document_rows(supabase))
+
+
+# ======================= SEARCH STRATEGIES (fallback path) =======================
 
 def _table_similar_documents(
     supabase: Client,
@@ -142,7 +181,7 @@ def _keyword_similar_documents(
     top_k: int,
     cached_rows: list[dict] | None = None,
 ) -> list[dict]:
-    """Cari dokumen berdasarkan overlap kata kunci."""
+    """Cari dokumen berdasarkan overlap kata kunci (fallback dari RPC FTS)."""
     try:
         rows = cached_rows if cached_rows is not None else fetch_document_rows(supabase)
     except Exception as exc:
@@ -185,6 +224,109 @@ def _merge_similar_documents(
     return sorted(merged.values(), key=lambda d: float(d.get("similarity") or 0), reverse=True)[:top_k]
 
 
+# ======================= RPC CALLS (primary path — DB-side filtering) =======================
+
+def _rpc_vector_search(
+    supabase: Client, query_embedding: list[float], categories: set[str], top_k: int
+) -> tuple[list[dict], bool]:
+    """Vector search via RPC dengan category_filter. Return (results, ok)."""
+    try:
+        response = supabase.rpc(
+            config.VECTOR_FUNCTION,
+            {
+                "query_embedding": query_embedding,
+                "match_threshold": config.RAG_MIN_SIMILARITY,
+                "match_count": max(top_k * 3, 15),
+                "category_filter": sorted(categories),
+            },
+        ).execute()
+        parts = extract_response_parts(response)
+        if parts["error"]:
+            raise RuntimeError(str(parts["error"]))
+        return parts["data"] or [], True
+    except Exception as exc:
+        logger.warning("Vector RPC failed: %s", exc)
+        return [], False
+
+
+ID_STOPWORDS = {
+    "apa", "apakah", "siapa", "siapakah", "bagaimana", "mengapa", "kenapa", "kapan",
+    "dimana", "mana", "yang", "dan", "di", "ke", "dari", "pada", "untuk", "dengan",
+    "ini", "itu", "atau", "adalah", "yaitu", "sebagai", "bisa", "dapat", "ada",
+    "saya", "kamu", "anda", "kami", "kita", "mereka", "dia", "nya", "tolong",
+    "coba", "jelaskan", "sebutkan", "tentang", "kasih", "tahu", "beri", "detail", "detailnya"
+}
+
+SYNONYMS = {
+    "eskul": "ekstrakurikuler",
+    "ekskul": "ekstrakurikuler",
+    "walas": "wali kelas",
+    "kepsek": "kepala sekolah",
+    "wakasek": "wakil kepala sekolah",
+    "tu": "tata usaha",
+    "sarpras": "sarana prasarana",
+}
+
+
+def _strip_id_affixes(word: str) -> str:
+    """Hapus akhiran/imbuhan umum bahasa Indonesia (-nya, -lah, -kah, -pun)."""
+    w = word.lower()
+    for suffix in ("nya", "lah", "kah", "pun"):
+        if len(w) > len(suffix) + 3 and w.endswith(suffix):
+            return w[:-len(suffix)]
+    return w
+
+
+def _extract_search_candidates(query: str) -> list[str]:
+    """Ekstrak beberapa kombinasi kata kunci bertingkat dari pertanyaan."""
+    tokens = re.findall(r"[a-zA-Z0-9]+", query.lower())
+    mapped_tokens = [SYNONYMS.get(t, t) for t in tokens]
+    meaningful = [t for t in mapped_tokens if t not in ID_STOPWORDS]
+    stemmed = [_strip_id_affixes(t) for t in meaningful]
+
+    candidates: list[str] = []
+    if meaningful:
+        candidates.append(" ".join(meaningful))
+    if stemmed and stemmed != meaningful:
+        candidates.append(" ".join(stemmed))
+    # Ambil 2-gram pertama untuk pertanyaan panjang (mis. 'wali kelas' dari 'sebutkan wali kelas dan detailnya')
+    if len(stemmed) >= 2:
+        sub = " ".join(stemmed[:2])
+        if sub not in candidates:
+            candidates.append(sub)
+    if query not in candidates:
+        candidates.append(query)
+
+    # Hilangkan duplikasi dengan mempertahankan urutan
+    return list(dict.fromkeys(candidates))
+
+
+def _rpc_keyword_search(
+    supabase: Client, question: str, categories: set[str], top_k: int
+) -> list[dict]:
+    if not question:
+        return []
+    queries = _extract_search_candidates(question)
+
+    for q_text in queries:
+        try:
+            response = supabase.rpc(
+                config.KEYWORD_FUNCTION,
+                {
+                    "search_query": q_text,
+                    "result_limit": max(top_k * 2, 10),
+                    "category_filter": sorted(categories),
+                },
+            ).execute()
+            parts = extract_response_parts(response)
+            if not parts["error"] and parts["data"]:
+                return parts["data"]
+        except Exception as exc:
+            logger.warning("Keyword RPC failed for query '%s': %s", q_text, exc)
+
+    return []
+
+
 # ======================= MAIN RETRIEVAL =======================
 
 def get_similar_documents(
@@ -196,59 +338,49 @@ def get_similar_documents(
 ) -> list[dict]:
     """
     Pipeline retrieval utama.
-    - Fetch rows sekali, reuse untuk keyword & vector search (kurangi DB calls redundan)
-    - Gunakan RPC untuk teacher/admin, table fallback untuk user biasa
+    Jalur cepat (default): 2 panggilan RPC ber-index (vector + keyword), keduanya
+    sudah difilter kategori di database — TIDAK fetch seluruh tabel.
+    Jalur fallback (hanya kalau RPC gagal): fetch tabel penuh + hitung similarity
+    di Python, seperti sebelumnya.
     """
     if top_k is None:
         top_k = config.RAG_TOP_K
 
     categories = set(allowed_categories(role))
 
-    # Cache rows sekali untuk reuse di keyword + vector search
+    rpc_vector_documents, vector_ok = _rpc_vector_search(supabase, query_embedding, categories, top_k)
+    rpc_keyword_documents = _rpc_keyword_search(supabase, question, categories, top_k) if question else []
+
+    # Defense-in-depth: walau RPC sudah filter kategori, filter lagi di Python
+    # (murah — hasil RPC sudah kecil, bukan seluruh tabel).
+    rpc_vector_documents = filter_rpc_documents_for_role(rpc_vector_documents, role)
+    rpc_keyword_documents = filter_rpc_documents_for_role(rpc_keyword_documents, role)
+
+    if vector_ok:
+        return _merge_similar_documents(rpc_vector_documents, rpc_keyword_documents, top_k)
+
+    # ---- Fallback: RPC vector search gagal (mis. DB down) ----
+    logger.warning("Falling back to full-table similarity search (role=%s)", role)
     cached_rows = None
     try:
         cached_rows = fetch_document_rows(supabase)
     except Exception as exc:
-        logger.warning("Pre-fetch document rows failed: %s", exc)
+        logger.warning("Fallback pre-fetch document rows failed: %s", exc)
 
     keyword_documents = (
         _keyword_similar_documents(supabase, question, categories, top_k, cached_rows)
         if question
         else []
     )
-
-    if role not in {"teacher", "admin"}:
-        vector_documents = _table_similar_documents(
-            supabase, query_embedding, categories, top_k, cached_rows
-        )
-        return _merge_similar_documents(vector_documents, keyword_documents, top_k)
-
-    # Teacher/Admin: coba RPC dulu, gabung dengan table fallback
-    rpc_documents = []
-    try:
-        response = supabase.rpc(
-            config.VECTOR_FUNCTION,
-            {
-                "query_embedding": query_embedding,
-                "match_threshold": config.RAG_MIN_SIMILARITY,
-                "match_count": max(top_k * 3, 15),
-            },
-        ).execute()
-        from utils.helpers import extract_response_parts
-        parts = extract_response_parts(response)
-        if not parts["error"]:
-            rpc_documents = filter_rpc_documents_for_role(parts["data"] or [], role)
-    except Exception as exc:
-        logger.warning("Vector RPC failed: %s", exc)
-
-    vector_documents = _table_similar_documents(
-        supabase, query_embedding, categories, top_k, cached_rows
+    vector_documents = _table_similar_documents(supabase, query_embedding, categories, top_k, cached_rows)
+    return _merge_similar_documents(
+        rpc_keyword_documents + vector_documents, keyword_documents, top_k
     )
-    return _merge_similar_documents(rpc_documents + vector_documents, keyword_documents, top_k)
 
 
 async def hybrid_search(supabase: Client, question: str, top_k: int = None) -> list[dict]:
-    """Hybrid search menggunakan RRF: vector + keyword + exact match."""
+    """Hybrid search menggunakan RRF: vector + keyword + exact match (tanpa filter role -
+    dipakai hanya untuk pemanggil yang sudah menjamin scope kategori-nya sendiri)."""
     from ai.embedding import embed_query
 
     if top_k is None:
@@ -290,19 +422,75 @@ async def hybrid_search(supabase: Client, question: str, top_k: int = None) -> l
     return fused[:top_k]
 
 
+THEMATIC_CATEGORIES = {
+    "ppdb": {
+        "keywords": ["ppdb", "pendaftaran", "daftar", "syarat masuk", "jalur", "zonasi", "afirmasi", "prestasi", "kuota", "biaya masuk", "formulir", "calon siswa"],
+        "filenames": ["ppdb", "pendaftaran", "siswa_baru"],
+    },
+    "akademik": {
+        "keywords": ["kurikulum", "jadwal", "pelajaran", "mapel", "ujian", "pts", "pas", "pat", "rapor", "kelulusan", "kalender", "semester", "kkm", "asesmen", "anbk"],
+        "filenames": ["kurikulum", "akademik", "jadwal", "kalender"],
+    },
+    "profil": {
+        "keywords": ["visi", "misi", "sejarah", "kepala sekolah", "profil", "alamat", "kontak", "fasilitas", "sarana", "prasarana", "akreditasi", "npsn", "ruang", "gedung", "lapangan", "perpustakaan", "lab", "laboratorium"],
+        "filenames": ["profil", "visi_misi", "fasilitas", "sarpras"],
+    },
+    "kesiswaan": {
+        "keywords": ["ekstrakurikuler", "ekskul", "osis", "pramuka", "paskibra", "pmr", "tata tertib", "aturan", "seragam", "poin", "pelanggaran", "prestasi siswa", "lomba", "beasiswa", "pip"],
+        "filenames": ["tata_tertib", "ekskul", "kesiswaan", "osis", "tata-tertib"],
+    },
+    "kepegawaian": {
+        "keywords": ["guru", "wali kelas", "nip", "staf", "tu", "tata usaha", "tenaga pendidik", "kepala tu", "pengajar"],
+        "filenames": ["guru", "kepegawaian", "staf", "wali_kelas"],
+    },
+}
+
+
+def detect_query_intent(question: str) -> list[str]:
+    """Deteksi kategori tematik dokumen berdasarkan kata kunci pertanyaan."""
+    q_lower = question.lower()
+    matched = []
+    for cat, data in THEMATIC_CATEGORIES.items():
+        if any(kw in q_lower for kw in data["keywords"]):
+            matched.append(cat)
+    return matched
+
+
+def infer_document_category(filename: str) -> str:
+    """Inferensi kategori dokumen dari nama file PDF secara otomatis."""
+    fname_lower = filename.lower()
+    for cat, data in THEMATIC_CATEGORIES.items():
+        if any(fn in fname_lower for fn in data["filenames"]):
+            return cat
+    return "public"
+
+
 def rerank_documents(
     question: str, docs: list[dict], final_k: int = None
 ) -> list[dict]:
-    """Rerank dokumen berdasarkan kombinasi vector similarity dan keyword overlap."""
+    """Rerank dokumen berdasarkan kombinasi vector similarity, keyword overlap, dan category boosting."""
     if final_k is None:
         final_k = config.RAG_FINAL_K
     qwords = words(question)
+    detected_intents = set(detect_query_intent(question))
     scored = []
     for i, doc in enumerate(docs):
         content = str(doc.get("content") or doc.get("text") or "")
         vector = float(doc.get("similarity") or doc.get("score") or doc.get("similarity_score") or 0)
         overlap = len(qwords & words(content)) / max(1, len(qwords))
-        score = vector * 0.75 + overlap * 0.25
+
+        # Category and filename match boost
+        category = str(doc.get("category") or "").lower()
+        pdf_name = str(doc.get("pdf_name") or "").lower()
+
+        boost = 0.0
+        if detected_intents:
+            if category in detected_intents:
+                boost += 0.15
+            elif any(intent in pdf_name for intent in detected_intents):
+                boost += 0.10
+
+        score = (vector * 0.65) + (overlap * 0.25) + boost
         scored.append((score, i, doc))
     scored.sort(key=lambda x: x[0], reverse=True)
     return [x[2] for x in scored[:final_k]]

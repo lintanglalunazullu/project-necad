@@ -1,5 +1,14 @@
 # services/api/app.py — Entry point FastAPI
+import os
+import sys
 import logging
+from contextlib import asynccontextmanager
+
+# Pastikan folder services/api ada di sys.path agar import internal (config, routes, ai)
+# selalu berhasil baik saat dev lokal maupun saat dijalankan dari root oleh Vercel.
+_current_dir = os.path.dirname(os.path.abspath(__file__))
+if _current_dir not in sys.path:
+    sys.path.insert(0, _current_dir)
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,6 +36,33 @@ logger = logging.getLogger("aksaraku")
 # ======================= SUPABASE CLIENT =======================
 supabase: Client = create_client(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY)
 
+
+# ======================= LIFESPAN (ganti @app.on_event yang deprecated) =======================
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # ---- Startup ----
+    logger.info("🚀 Aksaraku API v3.0 starting up...")
+    logger.info("CORS allowed origins: %s", config.ALLOWED_ORIGINS)
+
+    from ai.generation import get_provider_manager
+    manager = get_provider_manager()
+    updated = manager.reload_from_db(supabase)
+    if updated:
+        logger.info("✅ AI provider config dimuat dari DB: %s provider", updated)
+
+    active = manager.get_sorted_providers()
+    logger.info(
+        "✅ AI providers aktif: %s",
+        ", ".join(f"{p.name}(priority={p.priority}, model={p.model})" for p in active),
+    )
+    logger.info("✅ Aksaraku API siap menerima request.")
+
+    yield
+
+    # ---- Shutdown ----
+    logger.info("👋 Aksaraku API shutting down.")
+
+
 # ======================= FASTAPI APP =======================
 app = FastAPI(
     title="Aksaraku API",
@@ -34,6 +70,7 @@ app = FastAPI(
     version="3.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # Pasang rate limiter
@@ -50,35 +87,19 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],
 )
 
-# ======================= STARTUP EVENT =======================
-@app.on_event("startup")
-async def startup_event():
-    """Inisialisasi saat startup: load AI provider config dari DB."""
-    logger.info("🚀 Aksaraku API v3.0 starting up...")
-    logger.info("CORS allowed origins: %s", config.ALLOWED_ORIGINS)
-
-    # Load AI provider manager + sync dari DB kalau tabelnya ada
-    from ai.generation import get_provider_manager
-    manager = get_provider_manager()
-    updated = manager.reload_from_db(supabase)
-    if updated:
-        logger.info("✅ AI provider config dimuat dari DB: %s provider", updated)
-
-    active = manager.get_sorted_providers()
-    logger.info(
-        "✅ AI providers aktif: %s",
-        ", ".join(f"{p.name}(priority={p.priority}, model={p.model})" for p in active),
-    )
-    logger.info("✅ Aksaraku API siap menerima request.")
-
-
 # ======================= ROUTES =======================
+# Mount routes langsung (direct call) dan dengan prefix /api (Vercel rewrite & proxy)
 app.include_router(admin_router)
 app.include_router(documents_router)
 app.include_router(chat_router)
 
+app.include_router(admin_router, prefix="/api")
+app.include_router(documents_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
+
 
 @app.get("/health", tags=["system"])
+@app.get("/api/health", tags=["system"])
 async def health():
     """Health check endpoint — tampilkan status provider AI yang aktif."""
     from ai.generation import get_provider_manager

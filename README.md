@@ -52,14 +52,20 @@ cp services/api/.env.example services/api/.env
 # Buka Supabase Dashboard → SQL Editor → New Query
 # Salin seluruh isi file docs/supabase_setup.sql, tempel, lalu klik RUN
 
-# 4. Kasih izin eksekusi (sekali aja)
+### Di Linux / macOS:
+```bash
 chmod +x scripts/dev.sh scripts/stop.sh
-
-# 5. Jalankan SEMUA service sekaligus
 ./scripts/dev.sh
 ```
 
-Setelah jalan, bisa langsung akses:
+### Di Windows:
+Cukup double-click file **`dev.bat`** di folder utama, atau buka CMD / PowerShell:
+```cmd
+dev.bat
+```
+> **Catatan:** Pertama kali dijalankan di Linux (`dev.sh`) maupun Windows (`dev.bat`), script akan **otomatis membuat virtual environment (`.venv`)** dan menginstall semua paket di `requirements.txt`. Tidak perlu setup manual! Untuk mematikan semua service di Windows, cukup jalankan `stop.bat` atau tutup jendela terminal.
+
+Setelah jalan, bisa langsung akses di browser:
 
 | Service | URL |
 |---|---|
@@ -67,15 +73,6 @@ Setelah jalan, bisa langsung akses:
 | 🤖 Portal Mentor | http://localhost:8081 |
 | ⚙️ Backend API | http://localhost:3000 |
 | 📖 API Swagger Docs | http://localhost:3000/docs |
-
-```bash
-# Stop semua service
-./scripts/stop.sh
-
-# Atau tekan Ctrl+C di terminal yang jalankan dev.sh
-```
-
-> **Catatan:** Pertama kali dijalankan, `dev.sh` akan otomatis membuat virtual environment Python dan menginstall semua dependensi. Tidak perlu setup manual. Install sekarang lebih cepat karena tidak ada model HuggingFace yang perlu didownload.
 
 ---
 

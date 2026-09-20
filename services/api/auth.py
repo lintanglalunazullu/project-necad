@@ -81,7 +81,8 @@ def require_admin(supabase: Client, authorization: Optional[str]) -> tuple[str, 
 
 def allowed_categories(role: str) -> list[str]:
     """Kembalikan kategori dokumen yang boleh diakses berdasarkan role."""
-    return ["public", "private"] if role in {"teacher", "admin"} else ["public"]
+    base_public = ["public", "ppdb", "akademik", "profil", "kesiswaan", "kepegawaian"]
+    return base_public + ["private"] if role in {"teacher", "admin"} else base_public
 
 
 def filter_documents_for_role(

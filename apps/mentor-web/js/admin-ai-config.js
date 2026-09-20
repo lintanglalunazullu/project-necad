@@ -1,29 +1,51 @@
 /**
- * Aksaraku Admin — Panel Manajemen AI Engine & Fallback
- * Standar Senior AI Fullstack Engineer:
- * - Runtime configuration update tanpa restart server
- * - Live connection & latency test runner
- * - Visualisasi model catalog Free vs Pro
- * - Token auth injection aman
+ * Aksaraku Admin — Panel Pengaturan AI
+ * Clean, Simple, Professional, To the Point.
  */
 (async function () {
   const access = await window.requireAksarakuRole(['admin'], './login.html');
   if (!access) return;
 
   const API_BASE_URL = window.AKSARAKU_CONFIG.API_BASE_URL;
-  let allModels = [];
-  let providersData = {};
 
-  // Helper untuk otorisasi API
+  // State
+  let providersData = {};
+  let currentTab = 'gemini';
+  let scannedModelsCache = {};
+  let keyHealthCache = {}; 
+
+  const DEFAULT_FALLBACK_MODELS = {
+    gemini: [
+      { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite (Ultra Cepat & Anti-Overload)' },
+      { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash (Utama & Cerdas)' },
+      { id: 'gemini-3.5-flash', name: 'Gemini 3.5 Flash (Stabil & Cepat)' }
+    ],
+    groq: [
+      { id: 'llama-3.3-70b-versatile', name: 'Llama 3.3 70B Versatile' },
+      { id: 'llama-3.1-8b-instant', name: 'Llama 3.1 8B Instant' },
+      { id: 'deepseek-r1-distill-llama-70b', name: 'DeepSeek R1 Distill 70B' }
+    ],
+    openrouter: [
+      { id: 'meta-llama/llama-3.3-70b-instruct:free', name: 'Llama 3.3 70B (Free)' },
+      { id: 'deepseek/deepseek-r1:free', name: 'DeepSeek R1 (Free)' },
+      { id: 'qwen/qwen-2.5-72b-instruct:free', name: 'Qwen 2.5 72B (Free)' }
+    ]
+  };
+
+  const PROVIDER_METADATA = {
+    gemini: { name: 'Google Gemini', help: 'Dapatkan key di aistudio.google.com' },
+    groq: { name: 'Groq LPU', help: 'Dapatkan key di console.groq.com' },
+    openrouter: { name: 'OpenRouter', help: 'Dapatkan key di openrouter.ai' }
+  };
+
+  // Helper HTTP request
   async function apiRequest(path, options = {}) {
     let token = access?.session?.access_token;
     if (!token && access?.client?.auth) {
       try {
         const { data: { session } } = await access.client.auth.getSession();
         token = session?.access_token;
-      } catch (err) {
-        console.warn('Gagal mengambil session token:', err);
-      }
+      } catch (err) {}
     }
 
     const headers = {
@@ -32,10 +54,7 @@
       ...(options.headers || {}),
     };
 
-    const response = await fetch(`${API_BASE_URL}${path}`, {
-      ...options,
-      headers,
-    });
+    const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
     const result = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(result.detail || result.error || result.message || `HTTP ${response.status}`);
@@ -44,348 +63,450 @@
   }
 
   function showNotification(message, isError = false) {
-    const el = document.getElementById('statusNotification');
-    if (!el) return;
-    el.textContent = message;
-    el.className = `rounded-xl border p-4 text-sm transition-all duration-300 ${
-      isError
-        ? 'border-red-500/30 bg-red-500/10 text-red-200 block'
-        : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200 block'
+    let container = document.getElementById('toastContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'toastContainer';
+      container.className = 'fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none';
+      document.body.appendChild(container);
+    }
+    const toast = document.createElement('div');
+    toast.className = `px-4 py-3 rounded-lg shadow-lg text-sm font-medium transform transition-all duration-300 translate-x-full opacity-0 ${
+      isError ? 'bg-red-500 text-white shadow-red-500/20' 
+              : 'bg-emerald-500 text-white shadow-emerald-500/20'
     }`;
+    toast.textContent = message;
+    container.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
+    
+    // Animate out and remove
     setTimeout(() => {
-      el.className = 'hidden';
-    }, 5000);
+      toast.classList.add('opacity-0', 'translate-x-full');
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
   }
 
-  // Bind input sliders to value display
-  ['gemini', 'groq', 'openrouter'].forEach((p) => {
-    const tempInput = document.getElementById(`${p}_temp`);
-    const tempVal = document.getElementById(`${p}_temp_val`);
-    if (tempInput && tempVal) {
-      tempInput.addEventListener('input', (e) => {
-        tempVal.textContent = e.target.value;
-      });
-    }
-
-    const tokensInput = document.getElementById(`${p}_tokens`);
-    const tokensVal = document.getElementById(`${p}_tokens_val`);
-    if (tokensInput && tokensVal) {
-      tokensInput.addEventListener('input', (e) => {
-        tokensVal.textContent = e.target.value;
-      });
-    }
-  });
-
-  // Toggle show/hide password
-  document.querySelectorAll('[data-toggle-pass]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const targetId = btn.dataset.togglePass;
-      const input = document.getElementById(targetId);
-      if (input) {
-        input.type = input.type === 'password' ? 'text' : 'password';
-      }
-    });
-  });
-
-  // Load Providers Data
   async function loadProviders() {
     try {
       const res = await apiRequest('/admin/ai/providers');
       const list = res.providers || [];
       providersData = {};
-      list.forEach((p) => {
-        providersData[p.name] = p;
-        populateProviderCard(p);
-      });
-
-      updateFallbackSummary(list);
+      list.forEach((p) => { providersData[p.name] = p; });
+      renderWorkspace(currentTab);
     } catch (err) {
-      showNotification(`Gagal memuat konfigurasi provider AI: ${err.message}`, true);
+      showNotification(`Gagal memuat konfigurasi: ${err.message}`, true);
     }
   }
 
-  function populateProviderCard(p) {
-    const name = p.name;
-    const enabledCheck = document.getElementById(`${name}_enabled`);
-    if (enabledCheck) enabledCheck.checked = !!p.enabled;
-
-    const prioritySelect = document.getElementById(`${name}_priority`);
-    if (prioritySelect) prioritySelect.value = String(p.priority || 1);
-
-    const modelSelect = document.getElementById(`${name}_model`);
-    if (modelSelect && p.model) modelSelect.value = p.model;
-
-    const tempInput = document.getElementById(`${name}_temp`);
-    const tempVal = document.getElementById(`${name}_temp_val`);
-    if (tempInput && tempVal && p.temperature !== undefined) {
-      tempInput.value = p.temperature;
-      tempVal.textContent = p.temperature;
-    }
-
-    const tokensInput = document.getElementById(`${name}_tokens`);
-    const tokensVal = document.getElementById(`${name}_tokens_val`);
-    if (tokensInput && tokensVal && p.max_tokens !== undefined) {
-      tokensInput.value = p.max_tokens;
-      tokensVal.textContent = p.max_tokens;
-    }
-
-    const keyStatus = document.getElementById(`${name}_key_status`);
-    const keyInput = document.getElementById(`${name}_api_key`);
-    if (keyStatus) {
-      if (p.has_api_key) {
-        keyStatus.textContent = `Aktif (${p.masked_api_key || 'Tersimpan'})`;
-        keyStatus.className = 'text-[10px] font-mono text-emerald-400 font-semibold';
-        if (keyInput && p.masked_api_key) {
-          keyInput.placeholder = p.masked_api_key;
-        }
+  function switchTab(providerName) {
+    currentTab = providerName;
+    document.querySelectorAll('[data-provider-tab]').forEach((btn) => {
+      const isTarget = btn.dataset.providerTab === providerName;
+      if (isTarget) {
+        btn.className = 'px-4 py-2 rounded text-sm font-medium bg-white/10 text-white shadow-sm transition-all';
       } else {
-        keyStatus.textContent = 'Belum diisi';
-        keyStatus.className = 'text-[10px] font-mono text-amber-400 font-semibold';
+        btn.className = 'px-4 py-2 rounded text-sm font-medium text-slate-400 hover:text-white transition-all';
+      }
+    });
+
+    const input = document.getElementById('inputNewApiKey');
+    if (input) {
+      if (providerName === 'gemini') {
+        input.placeholder = 'AIzaSy... atau AQ.Ab...';
+      } else if (providerName === 'groq') {
+        input.placeholder = 'gsk_...';
+      } else if (providerName === 'openrouter') {
+        input.placeholder = 'sk-or-...';
+      } else {
+        input.placeholder = 'sk-...';
       }
     }
+
+    renderWorkspace(providerName);
   }
 
-  function updateFallbackSummary(providers) {
-    const active = providers
-      .filter((p) => p.enabled && p.has_api_key)
-      .sort((a, b) => a.priority - b.priority);
+  function renderWorkspace(providerName) {
+    const p = providersData[providerName] || { enabled: true, priority: 1, model: '', temperature: 0.2, max_tokens: 600, keys: [] };
+    const meta = PROVIDER_METADATA[providerName] || { name: providerName, help: '' };
 
-    const chainText = document.getElementById('fallbackChainText');
-    const countText = document.getElementById('activeProviderCount');
+    document.getElementById('activeProviderTitle').textContent = meta.name;
+    document.getElementById('providerHelpUrl').textContent = meta.help;
+    document.getElementById('provider_enabled_toggle').checked = !!p.enabled;
+    document.getElementById('provider_priority_select').value = String(p.priority || 1);
+    
+    // Nearest mapping for style/length
+    document.getElementById('style_select').value = p.temperature >= 0.7 ? "0.7" : (p.temperature <= 0.1 ? "0.0" : "0.2");
+    document.getElementById('length_select').value = p.max_tokens >= 1000 ? "1200" : (p.max_tokens <= 400 ? "300" : "600");
 
-    if (chainText) {
-      chainText.textContent = active.length
-        ? active.map((p) => p.name.toUpperCase()).join(' → ')
-        : 'Semua nonaktif / API key belum diset';
-    }
+    document.getElementById('testResultIndicator').textContent = '';
 
-    if (countText) {
-      countText.textContent = `${active.length} / ${providers.length}`;
-    }
+    renderKeysTable(providerName);
+    populateModelSelect(providerName);
   }
 
-  // Load Curated Models Catalog
-  async function loadModels() {
-    try {
-      const res = await apiRequest('/admin/ai/models');
-      allModels = res.models || [];
-      renderModelsCatalog('all');
-    } catch (err) {
-      console.warn('Gagal memuat katalog model:', err);
+  function renderKeysTable(providerName) {
+    const container = document.getElementById('keysContainer');
+    if (!container) return;
+
+    const p = providersData[providerName];
+    let keysList = p?.keys || [];
+    if (keysList.length === 0 && p?.masked_api_key) {
+      keysList = [{ id: 0, label: 'Kunci Utama', masked: p.masked_api_key }];
     }
+
+    if (keysList.length === 0) {
+      container.innerHTML = `<p class="text-xs text-slate-500 p-2">Belum ada API key.</p>`;
+      return;
+    }
+
+    container.innerHTML = keysList.map((k, idx) => {
+      const health = keyHealthCache[`${providerName}_${idx}`];
+      let healthText = '<span class="text-slate-500">Belum diuji</span>';
+      
+      if (health) {
+        if (health.success) {
+          healthText = `<span class="text-emerald-400 font-medium">✓ Normal (${health.latency_ms}ms)</span>`;
+        } else {
+          healthText = `<span class="text-red-400 font-medium" title="${health.error || ''}">✗ ${health.status_label || 'Gagal'}</span>`;
+        }
+      }
+
+      const label = k.label || (idx === 0 ? 'Kunci Utama' : `Kunci Cadangan #${idx}`);
+
+      return `
+        <div class="flex items-center justify-between p-2.5 rounded-lg bg-white/5 border border-white/10 hover:border-white/20 transition-colors">
+          <div class="flex items-center gap-3">
+            <span class="text-[11px] px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 font-medium">${label}</span>
+            <span class="text-xs font-mono text-slate-200 tracking-wider">${k.masked || '••••••••'}</span>
+            <span class="text-[11px]">${healthText}</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" data-test-key-idx="${idx}" class="text-xs px-2 py-1 rounded bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white transition-colors">Uji</button>
+            <button type="button" data-delete-key-idx="${idx}" class="text-xs px-2 py-1 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors">Hapus</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    container.querySelectorAll('[data-test-key-idx]').forEach(btn => {
+      btn.addEventListener('click', () => testSingleKey(providerName, parseInt(btn.dataset.testKeyIdx, 10)));
+    });
+    container.querySelectorAll('[data-delete-key-idx]').forEach(btn => {
+      btn.addEventListener('click', () => deleteKey(providerName, parseInt(btn.dataset.deleteKeyIdx, 10)));
+    });
   }
 
-  function renderModelsCatalog(filterTier = 'all') {
-    const grid = document.getElementById('modelsCatalogGrid');
-    if (!grid) return;
+  function populateModelSelect(providerName) {
+    const select = document.getElementById('active_model_select');
+    if (!select) return;
 
-    const filtered = allModels.filter((m) => {
-      if (filterTier === 'free') return m.tier === 'free';
-      if (filterTier === 'pro') return m.tier === 'pro';
+    const p = providersData[providerName];
+    if (p?.model && (p.model.includes('3.8') || p.model.includes('3.7') || p.model.includes('2.5'))) {
+      p.model = 'gemini-3.5-flash-lite';
+    }
+
+    const models = scannedModelsCache[providerName] || DEFAULT_FALLBACK_MODELS[providerName] || [];
+    const onlyFree = document.getElementById('filterOnlyFreeModels')?.checked;
+
+    let filteredModels = models.filter(m => {
+      const mid = String(m.id || '').toLowerCase();
+      if (mid.includes('3.8') || mid.includes('3.7') || mid.includes('2.5')) return false;
       return true;
     });
 
-    grid.innerHTML = filtered
-      .map((m) => `
-        <div class="rounded-xl border border-white/5 bg-black/20 p-4 space-y-2 hover:border-white/10 transition-colors">
-          <div class="flex items-center justify-between">
-            <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded ${
-              m.tier === 'free' ? 'badge-free' : 'badge-pro'
-            }">
-              ${m.tier.toUpperCase()} TIER
-            </span>
-            <span class="text-[11px] font-mono text-slate-400">${m.speed}</span>
-          </div>
+    if (onlyFree) {
+      filteredModels = filteredModels.filter(m => {
+        const mid = String(m.id || '').toLowerCase();
+        const mname = String(m.name || '').toLowerCase();
+        const isFree = m.tier === 'free' || mid.includes(':free') || mid.includes('flash') || mname.includes('gratis') || providerName === 'groq';
+        return isFree;
+      });
+    }
 
-          <div>
-            <h4 class="text-xs font-bold text-white font-mono">${m.id}</h4>
-            <p class="text-[11px] text-[#9CA3AF] mt-1">${m.desc}</p>
-          </div>
-
-          <div class="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-white/5">
-            <span>Konteks: ${m.context}</span>
-            <span class="text-purple-400 font-semibold">${m.badge}</span>
-          </div>
-        </div>
-      `)
-      .join('');
+    select.innerHTML = filteredModels.map(m => {
+      const mid = String(m.id || '').toLowerCase();
+      const mname = String(m.name || '').toLowerCase();
+      const isFree = m.tier === 'free' || mid.includes(':free') || mid.includes('flash') || mname.includes('gratis') || providerName === 'groq';
+      const tag = isFree ? '[Gratis]' : '[Pro]';
+      return `<option value="${m.id}">${m.name || m.id} ${tag}</option>`;
+    }).join('');
+    
+    if (p?.model) {
+      const exists = Array.from(select.options).some(opt => opt.value === p.model);
+      if (!exists) {
+        select.innerHTML += `<option value="${p.model}">${p.model} (Tersimpan)</option>`;
+      }
+      select.value = p.model;
+    }
   }
 
-  // Filter Buttons
-  document.querySelectorAll('[data-filter-tier]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('[data-filter-tier]').forEach((b) => {
-        b.className = 'px-3 py-1 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold';
-      });
-      btn.className = 'px-3 py-1 rounded-lg bg-purple-600 text-white text-xs font-semibold';
-      renderModelsCatalog(btn.dataset.filterTier);
+  document.getElementById('filterOnlyFreeModels')?.addEventListener('change', () => {
+    populateModelSelect(currentTab);
+  });
+
+  // Priority Auto-Swap
+  document.getElementById('provider_priority_select')?.addEventListener('change', (e) => {
+    const newPriority = parseInt(e.target.value, 10);
+    const currentP = providersData[currentTab];
+    if (!currentP) return;
+
+    const oldPriority = currentP.priority || 1;
+    currentP.priority = newPriority;
+
+    Object.keys(providersData).forEach((otherName) => {
+      if (otherName !== currentTab && providersData[otherName].priority === newPriority) {
+        providersData[otherName].priority = oldPriority;
+      }
     });
   });
 
-  // Save Provider Config
-  async function saveProvider(providerName) {
-    const enabled = document.getElementById(`${providerName}_enabled`)?.checked ?? true;
-    const priority = parseInt(document.getElementById(`${providerName}_priority`)?.value || '1', 10);
-    const model = document.getElementById(`${providerName}_model`)?.value;
-    const temperature = parseFloat(document.getElementById(`${providerName}_temp`)?.value || '0.2');
-    const max_tokens = parseInt(document.getElementById(`${providerName}_tokens`)?.value || '600', 10);
-    const keyInput = document.getElementById(`${providerName}_api_key`);
-    const rawKey = keyInput?.value?.trim();
+  // Keys Ops
+  async function handleAddApiKey() {
+    const input = document.getElementById('inputNewApiKey');
+    const newKey = input ? input.value.trim() : '';
+    if (!newKey) return;
 
-    const payload = {
-      enabled,
-      priority,
-      model,
-      temperature,
-      max_tokens,
-    };
-
-    // Sertakan API key hanya jika diisi dan bukan masked
-    if (rawKey && !rawKey.startsWith('••••')) {
-      payload.api_key = rawKey;
+    const btn = document.getElementById('btnAddApiKey');
+    const p = providersData[currentTab];
+    let keysList = p?.keys || [];
+    if (keysList.length === 0 && p?.masked_api_key) {
+      keysList = [{ id: 0, masked: p.masked_api_key }];
     }
+    const existingKeys = keysList.map(k => ({ id: k.id, masked: k.masked }));
+    const allKeysToSend = [...existingKeys, { value: newKey }];
 
     try {
-      const saveBtn = document.querySelector(`[data-save-provider="${providerName}"]`);
-      if (saveBtn) {
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Menyimpan...';
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = '...';
       }
-
-      const res = await apiRequest(`/admin/ai/providers/${providerName}`, {
+      await apiRequest(`/admin/ai/providers/${currentTab}`, {
         method: 'PUT',
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ api_keys: allKeysToSend }),
       });
-
-      showNotification(`Konfigurasi ${providerName.toUpperCase()} berhasil disimpan dan aktif.`);
-      if (rawKey && keyInput) {
-        keyInput.value = '';
-      }
+      if (input) input.value = '';
+      showNotification('Kunci API baru berhasil ditambahkan!');
       await loadProviders();
     } catch (err) {
-      showNotification(`Gagal menyimpan ${providerName}: ${err.message}`, true);
+      showNotification(`Gagal menambahkan: ${err.message}`, true);
     } finally {
-      const saveBtn = document.querySelector(`[data-save-provider="${providerName}"]`);
-      if (saveBtn) {
-        saveBtn.disabled = false;
-        saveBtn.innerHTML = '<i data-lucide="save" class="w-3.5 h-3.5"></i> Simpan';
-        if (window.lucide) window.lucide.createIcons();
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Tambah';
       }
     }
   }
 
-  // Test Provider Live
-  async function testProvider(providerName) {
-    const resultBox = document.getElementById(`${providerName}_test_result`);
-    const model = document.getElementById(`${providerName}_model`)?.value;
-    const keyInput = document.getElementById(`${providerName}_api_key`);
-    const rawKey = keyInput?.value?.trim();
-
-    if (resultBox) {
-      resultBox.classList.remove('hidden');
-      resultBox.innerHTML = '<span class="text-amber-400">Menguji koneksi & mengukur latency...</span>';
+  document.getElementById('btnAddApiKey')?.addEventListener('click', handleAddApiKey);
+  document.getElementById('inputNewApiKey')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddApiKey();
     }
+  });
 
-    const payload = {
-      provider: providerName,
-      model,
-      prompt: 'Sebutkan 1 moto pendidikan singkat untuk SMPN 2 Cibungbulang!',
-    };
-    if (rawKey && !rawKey.startsWith('••••')) {
-      payload.api_key = rawKey;
+  async function deleteKey(providerName, index) {
+    if (!confirm(`Hapus Kunci API ke-${index + 1}?`)) return;
+    const p = providersData[providerName];
+    let keysList = p?.keys || [];
+    if (keysList.length === 0 && p?.masked_api_key) {
+      keysList = [{ id: 0, masked: p.masked_api_key }];
     }
+    const remainingKeys = keysList
+      .filter((_, idx) => idx !== index)
+      .map(k => ({ id: k.id, masked: k.masked }));
 
     try {
-      const testBtn = document.querySelector(`[data-test-provider="${providerName}"]`);
-      if (testBtn) {
-        testBtn.disabled = true;
-        testBtn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Testing...';
-      }
-
-      const res = await apiRequest('/admin/ai/providers/test', {
-        method: 'POST',
-        body: JSON.stringify(payload),
+      await apiRequest(`/admin/ai/providers/${providerName}`, {
+        method: 'PUT',
+        body: JSON.stringify({ api_keys: remainingKeys }),
       });
-
-      if (resultBox) {
-        if (res.success) {
-          resultBox.innerHTML = `
-            <div class="space-y-1 text-emerald-300">
-              <div class="flex items-center justify-between font-bold">
-                <span>✅ KONEKSI BERHASIL</span>
-                <span class="text-white">${res.latency_ms} ms</span>
-              </div>
-              <p class="text-[11px] text-slate-300 line-clamp-2 italic">"${res.answer || ''}"</p>
-            </div>
-          `;
-        } else {
-          resultBox.innerHTML = `
-            <div class="space-y-1 text-red-300">
-              <div class="font-bold">❌ KONEKSI GAGAL (${res.latency_ms || '-'} ms)</div>
-              <p class="text-[10px] text-red-200 break-words">${res.error || 'Terjadi kesalahan'}</p>
-            </div>
-          `;
-        }
-      }
+      delete keyHealthCache[`${providerName}_${index}`];
+      showNotification('Kunci berhasil dihapus.');
+      await loadProviders();
     } catch (err) {
-      if (resultBox) {
-        resultBox.innerHTML = `<span class="text-red-400">Error: ${err.message}</span>`;
-      }
-    } finally {
-      const testBtn = document.querySelector(`[data-test-provider="${providerName}"]`);
-      if (testBtn) {
-        testBtn.disabled = false;
-        testBtn.innerHTML = '<i data-lucide="zap" class="w-3.5 h-3.5"></i> Test Koneksi';
-        if (window.lucide) window.lucide.createIcons();
-      }
+      showNotification(`Gagal menghapus: ${err.message}`, true);
     }
   }
 
-  // Bind Click Handlers
-  document.querySelectorAll('[data-save-provider]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      saveProvider(btn.dataset.saveProvider);
-    });
-  });
-
-  document.querySelectorAll('[data-test-provider]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      testProvider(btn.dataset.testProvider);
-    });
-  });
-
-  const reloadBtn = document.getElementById('btnReloadFromDb');
-  if (reloadBtn) {
-    reloadBtn.addEventListener('click', async () => {
-      try {
-        reloadBtn.disabled = true;
-        await apiRequest('/admin/ai/reload', { method: 'POST' });
-        showNotification('Konfigurasi berhasil disinkronkan dari database Supabase.');
-        await loadProviders();
-      } catch (err) {
-        showNotification(`Gagal reload dari DB: ${err.message}`, true);
-      } finally {
-        reloadBtn.disabled = false;
+  async function testSingleKey(providerName, index) {
+    try {
+      const res = await apiRequest(`/admin/ai/providers/${providerName}/test-keys`, { method: 'POST' });
+      if (res.results && res.results[index]) {
+        keyHealthCache[`${providerName}_${index}`] = res.results[index];
+        if (!res.results[index].success) {
+          showNotification(`Uji kunci ke-${index + 1} gagal: ${res.results[index].error || 'Tidak valid'}`, true);
+        } else {
+          showNotification(`Uji kunci ke-${index + 1} berhasil! (${res.results[index].latency_ms}ms)`);
+        }
       }
-    });
+      renderKeysTable(providerName);
+    } catch (err) {
+      showNotification(`Gagal menguji: ${err.message}`, true);
+    }
   }
 
-  // Mobile sidebar toggle
-  const mobileToggle = document.querySelector('[data-mobile-menu-toggle]');
-  const sidebar = document.querySelector('[data-mobile-sidebar]');
-  const overlay = document.querySelector('[data-mobile-sidebar-overlay]');
+  document.getElementById('btnTestAllKeys')?.addEventListener('click', async (e) => {
+    const btn = e.target;
+    try {
+      btn.textContent = 'Menguji...';
+      const res = await apiRequest(`/admin/ai/providers/${currentTab}/test-keys`, { method: 'POST' });
+      let failedCount = 0;
+      let totalCount = (res.results || []).length;
+      (res.results || []).forEach((item, idx) => {
+        keyHealthCache[`${currentTab}_${idx}`] = item;
+        if (!item.success) failedCount++;
+      });
+      if (failedCount > 0) {
+        showNotification(`${failedCount} dari ${totalCount} kunci gagal terhubung!`, true);
+      } else if (totalCount > 0) {
+        showNotification(`Semua ${totalCount} kunci aktif dan normal!`);
+      }
+      renderKeysTable(currentTab);
+    } catch (err) {
+      showNotification(`Gagal menguji: ${err.message}`, true);
+    } finally {
+      btn.textContent = '↻ Uji Koneksi Semua Kunci';
+    }
+  });
 
-  if (mobileToggle && sidebar && overlay) {
-    mobileToggle.addEventListener('click', () => {
-      sidebar.classList.toggle('hidden');
-      overlay.classList.toggle('hidden');
-    });
-    overlay.addEventListener('click', () => {
-      sidebar.classList.add('hidden');
-      overlay.classList.add('hidden');
-    });
-  }
+  document.getElementById('btnScanModels')?.addEventListener('click', async (e) => {
+    const btn = e.target;
+    try {
+      btn.textContent = 'Memindai...';
+      const res = await apiRequest(`/admin/ai/providers/${currentTab}/scan-models`, { method: 'POST' });
+      if (res.models && res.models.length > 0) {
+        scannedModelsCache[currentTab] = res.models;
+        populateModelSelect(currentTab);
+        showNotification(`Ditemukan ${res.models.length} model.`);
+      }
+    } catch (err) {
+      showNotification(`Gagal memindai: ${err.message}`, true);
+    } finally {
+      btn.textContent = '↻ Pindai Model Terbaru';
+    }
+  });
 
-  // Initial Load
-  await Promise.all([loadProviders(), loadModels()]);
+  document.getElementById('btnSaveActiveProvider')?.addEventListener('click', async (e) => {
+    const btn = e.target;
+    const enabled = document.getElementById('provider_enabled_toggle').checked;
+    const priority = parseInt(document.getElementById('provider_priority_select').value, 10);
+    let model = document.getElementById('active_model_select').value;
+    if (model && (model.includes('3.8') || model.includes('3.7') || model.includes('2.5'))) {
+      model = 'gemini-3.5-flash-lite';
+    }
+    const temperature = parseFloat(document.getElementById('style_select').value);
+    const max_tokens = parseInt(document.getElementById('length_select').value, 10);
+
+    const input = document.getElementById('inputNewApiKey');
+    const pendingNewKey = input ? input.value.trim() : '';
+
+    try {
+      btn.disabled = true;
+      btn.textContent = 'Menyimpan...';
+
+      const updatePayload = { enabled, priority, model, temperature, max_tokens };
+
+      // Jika user mengisi input key tapi langsung klik "Simpan Pengaturan"
+      if (pendingNewKey) {
+        const p = providersData[currentTab];
+        let keysList = p?.keys || [];
+        if (keysList.length === 0 && p?.masked_api_key) {
+          keysList = [{ id: 0, masked: p.masked_api_key }];
+        }
+        const existingKeys = keysList.map(k => ({ id: k.id, masked: k.masked }));
+        updatePayload.api_keys = [...existingKeys, { value: pendingNewKey }];
+      }
+
+      await apiRequest(`/admin/ai/providers/${currentTab}`, {
+        method: 'PUT',
+        body: JSON.stringify(updatePayload),
+      });
+
+      if (pendingNewKey && input) {
+        input.value = '';
+      }
+
+      for (const [pName, pData] of Object.entries(providersData)) {
+        if (pName !== currentTab) {
+          await apiRequest(`/admin/ai/providers/${pName}`, {
+            method: 'PUT',
+            body: JSON.stringify({ priority: pData.priority }),
+          }).catch(() => {});
+        }
+      }
+
+      showNotification('Pengaturan berhasil disimpan.');
+      await loadProviders();
+    } catch (err) {
+      showNotification(`Gagal menyimpan: ${err.message}`, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Simpan Pengaturan';
+    }
+  });
+
+  document.getElementById('btnLiveChatTest')?.addEventListener('click', async (e) => {
+    const btn = e.target;
+    const ind = document.getElementById('testResultIndicator');
+    try {
+      btn.disabled = true;
+      ind.className = 'text-sm font-medium text-slate-400';
+      ind.textContent = 'Mengirim pesan...';
+      
+      const model = document.getElementById('active_model_select').value;
+      const res = await apiRequest('/admin/ai/providers/test', {
+        method: 'POST',
+        body: JSON.stringify({ provider: currentTab, model, prompt: 'Test koneksi singkat' }),
+      });
+
+      if (res.success) {
+        ind.className = 'text-sm font-medium text-emerald-400';
+        ind.textContent = `Sukses (${res.latency_ms}ms)`;
+      } else {
+        ind.className = 'text-sm font-medium text-red-400';
+        ind.textContent = `Gagal: ${res.error || 'Unknown Error'}`;
+      }
+    } catch (err) {
+      ind.className = 'text-sm font-medium text-red-400';
+      ind.textContent = `Error: ${err.message}`;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('btnReloadFromDb')?.addEventListener('click', async (e) => {
+    const btn = e.target;
+    try {
+      btn.disabled = true;
+      btn.textContent = '...';
+      await apiRequest('/admin/ai/reload', { method: 'POST' });
+      showNotification('Berhasil sinkronisasi dengan Database.');
+      await loadProviders();
+    } catch (err) {
+      showNotification(`Gagal sinkronisasi: ${err.message}`, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sinkronisasi Ulang';
+    }
+  });
+
+  // Bind tab clicks
+  document.querySelectorAll('[data-provider-tab]').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.providerTab));
+  });
+
+  // Sidebar mobile
+  document.querySelector('[data-mobile-menu-toggle]')?.addEventListener('click', () => {
+    document.querySelector('[data-mobile-sidebar]')?.classList.toggle('hidden');
+    document.querySelector('[data-mobile-sidebar-overlay]')?.classList.toggle('hidden');
+  });
+  document.querySelector('[data-mobile-sidebar-overlay]')?.addEventListener('click', () => {
+    document.querySelector('[data-mobile-sidebar]')?.classList.add('hidden');
+    document.querySelector('[data-mobile-sidebar-overlay]')?.classList.add('hidden');
+  });
+
+  await loadProviders();
 })();

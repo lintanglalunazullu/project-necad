@@ -22,7 +22,12 @@
       return 'http://localhost:3000';
     }
 
-    // 3. Lingkungan Server / Subdomain Production
+    // 3. Lingkungan Vercel (1 hosting tunggal all-in-one)
+    if (hostname.endsWith('.vercel.app')) {
+      return protocol + '//' + hostname + '/api';
+    }
+
+    // 4. Lingkungan Server / Subdomain Production (VPS / Nginx)
     // Contoh: mentor.smpn2cibungbulang.sch.id -> api.smpn2cibungbulang.sch.id
     var baseDomain = hostname.replace(/^(mentor|www)\./i, '');
     var apiProtocol = protocol === 'http:' ? 'http:' : 'https:';

@@ -65,3 +65,9 @@ Desktop.ini
 
 # -------------------- DATA / PRE-COMPUTED EMBEDDINGS ----------
 apps/mentor-web/data/
+
+# -------------------- SEED DATA DENGAN DATA PRIBADI SISWA -----
+# Berisi embedding + isi dokumen sekolah (termasuk data pribadi siswa
+# pada beberapa chunk laporan PKL). Jangan pernah commit ke Git.
+docs/seed_school_documents.OPTIONAL.sql
+docs/*seed*.sql

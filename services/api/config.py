@@ -2,6 +2,11 @@
 import os
 from dotenv import load_dotenv
 
+# Muat .env baik dari direktori services/api maupun dari CWD root
+_this_dir = os.path.dirname(os.path.abspath(__file__))
+_local_env = os.path.join(_this_dir, ".env")
+if os.path.exists(_local_env):
+    load_dotenv(dotenv_path=_local_env)
 load_dotenv()
 
 # ======================= SUPABASE =======================
@@ -21,15 +26,14 @@ AI_CONFIG_TABLE: str = os.getenv("AI_CONFIG_TABLE", "ai_provider_config")
 
 # ======================= EMBEDDING (Gemini) =======================
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "models/text-embedding-004")
-# Dimensi output embedding. Gemini text-embedding-004 support 256/512/768.
-# Default 768 untuk akurasi maksimal. Sesuaikan dengan kolom vector di Supabase.
-EXPECTED_EMBEDDING_DIMENSION: int = int(os.getenv("EXPECTED_EMBEDDING_DIMENSION", "768"))
+GEMINI_EMBEDDING_MODEL: str = os.getenv("GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001")
+# Dimensi output embedding. Kolom vector Supabase pdf_documents adalah vector(384).
+EXPECTED_EMBEDDING_DIMENSION: int = int(os.getenv("EXPECTED_EMBEDDING_DIMENSION", "384"))
 EMBEDDING_RETRIES: int = max(1, int(os.getenv("EMBEDDING_RETRIES", "3")))
 
 # ======================= LLM PROVIDERS =======================
 # --- Gemini ---
-GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.0-flash")
+GEMINI_CHAT_MODEL: str = os.getenv("GEMINI_CHAT_MODEL", "gemini-3.5-flash-lite")
 
 # --- Groq (support multi-key round-robin) ---
 GROQ_API_KEYS: list[str] = [
@@ -65,7 +69,7 @@ MAX_OUTPUT_TOKENS: int = int(os.getenv("MAX_OUTPUT_TOKENS", "600"))
 # ======================= RAG SETTINGS =======================
 RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "20"))
 RAG_FINAL_K: int = int(os.getenv("RAG_FINAL_K", "8"))
-RAG_MIN_SIMILARITY: float = float(os.getenv("RAG_MIN_SIMILARITY", "0.20"))
+RAG_MIN_SIMILARITY: float = float(os.getenv("RAG_MIN_SIMILARITY", "0.05"))
 COMPRESS_CONTEXT: bool = os.getenv("COMPRESS_CONTEXT", "false").lower() in {"1", "true", "yes"}
 
 # ======================= SESSION =======================
@@ -92,10 +96,10 @@ ALLOWED_ORIGINS: list[str] = (
     ]
 )
 
-# Regex pattern untuk mengizinkan semua subdomain sekolah & localhost secara fleksibel
+# Regex pattern untuk mengizinkan semua subdomain sekolah, vercel.app, & localhost secara fleksibel
 ALLOWED_ORIGIN_REGEX: str = os.getenv(
     "ALLOWED_ORIGIN_REGEX",
-    r"^(https?://([a-zA-Z0-9-]+\.)*smpn2cibungbulang\.sch\.id(:[0-9]+)?|http://(localhost|127\.0\.0\.1)(:[0-9]+)?)$",
+    r"^(https?://([a-zA-Z0-9-]+\.)*(smpn2cibungbulang\.sch\.id|vercel\.app)(:[0-9]+)?|http://(localhost|127\.0\.0\.1)(:[0-9]+)?)$",
 )
 
 

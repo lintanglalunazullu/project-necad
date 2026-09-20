@@ -127,3 +127,23 @@ async def health():
         },
         "cors_origins": config.ALLOWED_ORIGINS,
     }
+
+
+# ======================= STATIC WEBSITES (Unified Vercel Hosting) =======================
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
+
+_project_root = os.path.abspath(os.path.join(_current_dir, "..", ".."))
+_mentor_web_dir = os.path.join(_project_root, "apps", "mentor-web")
+_school_web_dir = os.path.join(_project_root, "apps", "school-web")
+
+@app.get("/mentor", include_in_schema=False)
+async def redirect_mentor():
+    """Redirect /mentor ke /mentor/ agar StaticFiles melayani index.html."""
+    return RedirectResponse(url="/mentor/", status_code=301)
+
+if os.path.isdir(_mentor_web_dir):
+    app.mount("/mentor", StaticFiles(directory=_mentor_web_dir, html=True), name="mentor")
+
+if os.path.isdir(_school_web_dir):
+    app.mount("/", StaticFiles(directory=_school_web_dir, html=True), name="school")

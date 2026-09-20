@@ -1,25 +1,3 @@
 {
-  "version": 2,
-  "rewrites": [
-    {
-      "source": "/mentor",
-      "destination": "/apps/mentor-web/index.html"
-    },
-    {
-      "source": "/mentor/",
-      "destination": "/apps/mentor-web/index.html"
-    },
-    {
-      "source": "/mentor/(.*)",
-      "destination": "/apps/mentor-web/$1"
-    },
-    {
-      "source": "/",
-      "destination": "/apps/school-web/index.html"
-    },
-    {
-      "source": "/((?!api|docs|redoc|openapi.json).*)",
-      "destination": "/apps/school-web/$1"
-    }
-  ]
+  "version": 2
 }

@@ -14,17 +14,30 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import sys
 import threading
 import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 
+# Pastikan folder services/api ada di sys.path agar modul internal
+# (config, auth, utils, ai) dapat di-resolve dengan sempurna oleh runtime maupun IDE language server.
+_api_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _api_root not in sys.path:
+    sys.path.insert(0, _api_root)
+
 from supabase import Client
 
-import config
-from auth import allowed_categories, filter_documents_for_role, filter_rpc_documents_for_role
-from utils.helpers import extract_response_parts, words
+try:
+    import config
+    from auth import allowed_categories, filter_documents_for_role, filter_rpc_documents_for_role
+    from utils.helpers import extract_response_parts, words
+except ImportError:
+    from .. import config
+    from ..auth import allowed_categories, filter_documents_for_role, filter_rpc_documents_for_role
+    from ..utils.helpers import extract_response_parts, words
 
 logger = logging.getLogger("aksaraku.retrieval")
 
@@ -548,7 +561,10 @@ def reformulate_with_llm(question: str) -> dict:
         return {"canonical_query": "", "search_keywords": [], "new_slang_detected": []}
 
     try:
-        from ai.generation import get_provider_manager, _call_gemini
+        try:
+            from ai.generation import get_provider_manager, _call_gemini
+        except ImportError:
+            from .generation import get_provider_manager, _call_gemini
         manager = get_provider_manager()
         gemini_provider = manager.get_provider("gemini")
         if not gemini_provider:
@@ -836,7 +852,10 @@ def get_similar_documents(
 async def hybrid_search(supabase: Client, question: str, top_k: Optional[int] = None) -> list[dict]:
     """Hybrid search menggunakan RRF: vector + keyword + exact match (tanpa filter role -
     dipakai hanya untuk pemanggil yang sudah menjamin scope kategori-nya sendiri)."""
-    from ai.embedding import embed_query
+    try:
+        from ai.embedding import embed_query
+    except ImportError:
+        from .embedding import embed_query
 
     if top_k is None:
         top_k = config.RAG_TOP_K

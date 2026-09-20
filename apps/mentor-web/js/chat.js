@@ -371,13 +371,21 @@ function appendUserMessage(text) {
     return wrapper;
 }
 
+function getAiAvatarImgHtml() {
+    const isSubDir = window.location.pathname.includes('/admin/') || window.location.pathname.includes('/teacher/');
+    const defaultRelPath = isSubDir ? '../image/logo.png' : './image/logo.png';
+    const existingLogo = document.querySelector('img[alt="Aksaraku"], .brand-logo');
+    const logoSrc = existingLogo ? existingLogo.getAttribute('src') : defaultRelPath;
+    return `<img src="${logoSrc}" alt="Aksaraku" class="h-5 w-5 object-contain" onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='${defaultRelPath}';}" />`;
+}
+
 function appendTypingIndicator() {
     const wrapper = document.createElement("div");
     wrapper.className = "flex items-start gap-3 animate-fadeUp";
     wrapper.id = "typingIndicator";
     wrapper.innerHTML = `
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-purple-900/30">
-        <img src="../image/logo.png" alt="Aksaraku" class="h-5 w-5 object-contain" />
+        ${getAiAvatarImgHtml()}
       </div>
             <div class="ai-thinking-bubble bg-bubbleAi border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5">
                 <div class="flex items-center gap-2">
@@ -398,7 +406,7 @@ function appendAiReply(text) {
     wrapper.className = "flex items-start gap-3 animate-fadeUp";
     wrapper.innerHTML = `
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-purple-900/30">
-        <img src="../image/logo.png" alt="Aksaraku" class="h-5 w-5 object-contain" />
+        ${getAiAvatarImgHtml()}
       </div>
     <div class="ai-reply-bubble bg-bubbleAi border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5 max-w-[85%]">
         <p class="text-sm leading-relaxed text-[#F3F4F6] whitespace-pre-wrap"></p>
@@ -544,7 +552,7 @@ function appendAiReplyWithSources(answer, sources) {
     const sourcesHtml = createSourcesHtml(sources);
     wrapper.innerHTML = `
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-purple-900/30">
-        <img src="../image/logo.png" alt="Aksaraku" class="h-5 w-5 object-contain" />
+        ${getAiAvatarImgHtml()}
       </div>
       <div class="ai-reply-bubble bg-bubbleAi border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5 max-w-[85%] space-y-2">
         <div>
@@ -565,7 +573,7 @@ function createStreamingAiReplyBubble() {
     wrapper.className = "flex items-start gap-3 animate-fadeUp";
     wrapper.innerHTML = `
       <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shrink-0 shadow-md shadow-purple-900/30">
-        <img src="../image/logo.png" alt="Aksaraku" class="h-5 w-5 object-contain" />
+        ${getAiAvatarImgHtml()}
       </div>
       <div class="ai-reply-bubble bg-bubbleAi border border-white/5 rounded-2xl rounded-tl-sm px-4 py-3.5 max-w-[85%] space-y-2">
         <div class="ai-text-container">

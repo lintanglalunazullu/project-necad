@@ -250,11 +250,12 @@ def _rpc_vector_search(
 
 
 ID_STOPWORDS = {
-    "apa", "apakah", "siapa", "siapakah", "bagaimana", "mengapa", "kenapa", "kapan",
-    "dimana", "mana", "yang", "dan", "di", "ke", "dari", "pada", "untuk", "dengan",
+    "apa", "apakah", "siapa", "siapakah", "bagaimana", "bagaimanakah", "mengapa", "kenapa", "kapan",
+    "dimana", "dimanakah", "mana", "yang", "dan", "di", "ke", "dari", "pada", "untuk", "dengan",
     "ini", "itu", "atau", "adalah", "yaitu", "sebagai", "bisa", "dapat", "ada",
     "saya", "kamu", "anda", "kami", "kita", "mereka", "dia", "nya", "tolong",
-    "coba", "jelaskan", "sebutkan", "tentang", "kasih", "tahu", "beri", "detail", "detailnya"
+    "coba", "jelaskan", "sebutkan", "tentang", "kasih", "tahu", "beri", "detail", "detailnya",
+    "berapa", "berapakah", "nomor", "no", "jumlah", "total", "sekolah"
 }
 
 SYNONYMS = {
@@ -265,7 +266,19 @@ SYNONYMS = {
     "wakasek": "wakil kepala sekolah",
     "tu": "tata usaha",
     "sarpras": "sarana prasarana",
+    "telp": "telepon",
+    "hp": "telepon",
+    "handphone": "telepon",
+    "kontak": "telepon",
 }
+
+KEY_ENTITIES = [
+    "luas tanah", "luas bangunan", "kepala sekolah", "wali kelas",
+    "tata tertib", "kalender pendidikan", "ekstrakurikuler", "jadwal",
+    "npsn", "nss", "nisn", "nip", "kkm", "visi", "misi",
+    "telepon", "telp", "pramuka", "osis", "paskibra", "pmr", "akreditasi",
+    "semester", "libur", "anbk", "pts", "pas", "pat", "kisi-kisi"
+]
 
 
 def _strip_id_affixes(word: str) -> str:
@@ -278,22 +291,30 @@ def _strip_id_affixes(word: str) -> str:
 
 
 def _extract_search_candidates(query: str) -> list[str]:
-    """Ekstrak beberapa kombinasi kata kunci bertingkat dari pertanyaan."""
-    tokens = re.findall(r"[a-zA-Z0-9]+", query.lower())
+    """Ekstrak beberapa kombinasi kata kunci bertingkat dari pertanyaan dengan prioritas entitas."""
+    ql = query.lower()
+    candidates: list[str] = []
+
+    # 1. Deteksi entitas kunci (akronim & frase substantif sekolah)
+    for ent in KEY_ENTITIES:
+        if ent in ql:
+            candidates.append(ent)
+            if ent in ("telepon", "telp"):
+                candidates.extend(["telp", "telepon"])
+
+    # 2. Tokenisasi kata & pemetaan sinonim
+    tokens = re.findall(r"[a-zA-Z0-9]+", ql)
     mapped_tokens = [SYNONYMS.get(t, t) for t in tokens]
     meaningful = [t for t in mapped_tokens if t not in ID_STOPWORDS]
     stemmed = [_strip_id_affixes(t) for t in meaningful]
 
-    candidates: list[str] = []
     if meaningful:
         candidates.append(" ".join(meaningful))
+        if len(meaningful) > 1:
+            candidates.extend(meaningful)
     if stemmed and stemmed != meaningful:
         candidates.append(" ".join(stemmed))
-    # Ambil 2-gram pertama untuk pertanyaan panjang (mis. 'wali kelas' dari 'sebutkan wali kelas dan detailnya')
-    if len(stemmed) >= 2:
-        sub = " ".join(stemmed[:2])
-        if sub not in candidates:
-            candidates.append(sub)
+
     if query not in candidates:
         candidates.append(query)
 
@@ -323,6 +344,23 @@ def _rpc_keyword_search(
                 return parts["data"]
         except Exception as exc:
             logger.warning("Keyword RPC failed for query '%s': %s", q_text, exc)
+
+    # Fallback pencarian langsung (ILIKE) untuk entitas kunci jika RPC mengembalikan 0 hasil
+    for cand in queries[:4]:
+        cand_clean = cand.strip()
+        if len(cand_clean) >= 3 and cand_clean not in ID_STOPWORDS:
+            try:
+                qb = supabase.table(config.SUPABASE_TABLE).select("id, pdf_name, category, content")
+                if categories:
+                    qb = qb.in_("category", list(categories))
+                res = qb.ilike("content", f"%{cand_clean}%").limit(top_k).execute()
+                if res.data:
+                    for r in res.data:
+                        r["similarity"] = 0.5
+                        r["keyword_score"] = 1.0
+                    return res.data
+            except Exception as exc:
+                logger.debug("ILIKE fallback search skipped: %s", exc)
 
     return []
 
@@ -428,20 +466,20 @@ THEMATIC_CATEGORIES = {
         "filenames": ["ppdb", "pendaftaran", "siswa_baru"],
     },
     "akademik": {
-        "keywords": ["kurikulum", "jadwal", "pelajaran", "mapel", "ujian", "pts", "pas", "pat", "rapor", "kelulusan", "kalender", "semester", "kkm", "asesmen", "anbk"],
-        "filenames": ["kurikulum", "akademik", "jadwal", "kalender"],
+        "keywords": ["kurikulum", "jadwal", "pelajaran", "mapel", "ujian", "pts", "pas", "pat", "rapor", "kelulusan", "kalender", "semester", "kkm", "asesmen", "anbk", "libur", "kisi-kisi"],
+        "filenames": ["kurikulum", "akademik", "jadwal", "kalender", "pedoman"],
     },
     "profil": {
-        "keywords": ["visi", "misi", "sejarah", "kepala sekolah", "profil", "alamat", "kontak", "fasilitas", "sarana", "prasarana", "akreditasi", "npsn", "ruang", "gedung", "lapangan", "perpustakaan", "lab", "laboratorium"],
-        "filenames": ["profil", "visi_misi", "fasilitas", "sarpras"],
+        "keywords": ["visi", "misi", "sejarah", "kepala sekolah", "profil", "alamat", "kontak", "fasilitas", "sarana", "prasarana", "akreditasi", "npsn", "nss", "ruang", "gedung", "lapangan", "perpustakaan", "lab", "laboratorium", "tanah", "luas tanah", "luas bangunan", "telepon", "telp"],
+        "filenames": ["profil", "profile", "visi_misi", "fasilitas", "sarpras"],
     },
     "kesiswaan": {
         "keywords": ["ekstrakurikuler", "ekskul", "osis", "pramuka", "paskibra", "pmr", "tata tertib", "aturan", "seragam", "poin", "pelanggaran", "prestasi siswa", "lomba", "beasiswa", "pip"],
-        "filenames": ["tata_tertib", "ekskul", "kesiswaan", "osis", "tata-tertib"],
+        "filenames": ["tata_tertib", "ekskul", "kesiswaan", "osis", "tata-tertib", "ekstrakurikuler", "jadwal-ekstrakurikuler"],
     },
     "kepegawaian": {
         "keywords": ["guru", "wali kelas", "nip", "staf", "tu", "tata usaha", "tenaga pendidik", "kepala tu", "pengajar"],
-        "filenames": ["guru", "kepegawaian", "staf", "wali_kelas"],
+        "filenames": ["guru", "kepegawaian", "staf", "wali_kelas", "wali-kelas", "absen"],
     },
 }
 

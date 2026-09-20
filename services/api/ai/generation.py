@@ -1106,11 +1106,12 @@ def calculate_evidence_confidence(question: str, docs: list[dict], answer: str) 
         content = str(doc.get("content") or doc.get("text") or "")
         lexical = len(awords & words(content)) / max(1, len(awords))
         vector = float(doc.get("similarity") or doc.get("score") or 0)
-        scores.append(vector * 0.65 + lexical * 0.35)
+        fact_score = max(vector, lexical) * 0.5 + (vector * 0.3 + lexical * 0.2)
+        scores.append(fact_score)
 
     score = max(0, min(max(scores), 1))
-    level = "high" if score >= 0.78 else "medium" if score >= 0.55 else "low"
-    return {"score": round(score, 3), "level": level, "supported": score >= 0.55}
+    level = "high" if score >= 0.60 else "medium" if score >= 0.30 else "low"
+    return {"score": round(score, 3), "level": level, "supported": score >= 0.25}
 
 
 def public_sources(documents: list[dict]) -> list[dict]:

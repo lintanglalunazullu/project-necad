@@ -1,5 +1,5 @@
-const CHUNK_SIZE = 800;
-const CHUNK_OVERLAP = 100;
+const CHUNK_SIZE = 350;
+const CHUNK_OVERLAP = 60;
 const EMBED_UPSERT_URL = `${window.AKSARAKU_CONFIG.API_BASE_URL}/embed-upsert`;
 const pdfFileInput = document.getElementById('pdfFile');
 const processBtn = document.getElementById('processBtn');
@@ -11,35 +11,63 @@ function logStatus(message) {
   statusOutput.scrollTop = statusOutput.scrollHeight;
 }
 
-function chunkText(text, size, overlap) {
-  const tokens = text.split(/\s+/);
+function chunkText(text, size = CHUNK_SIZE, overlap = CHUNK_OVERLAP) {
+  // Pemotongan pintar: pisahkan per paragraf terlebih dahulu agar konteks ide tidak terpotong
+  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   const chunks = [];
-  let start = 0;
+  let currentWords = [];
 
-  while (start < tokens.length) {
-    const end = Math.min(start + size, tokens.length);
-    chunks.push(tokens.slice(start, end).join(' '));
-    start += size - overlap;
+  for (const para of paragraphs) {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length) continue;
+
+    if (words.length > size) {
+      let start = 0;
+      while (start < words.length) {
+        const end = Math.min(start + size, words.length);
+        chunks.push(words.slice(start, end).join(' '));
+        start += (size - overlap);
+      }
+      currentWords = [];
+      continue;
+    }
+
+    if (currentWords.length + words.length <= size) {
+      currentWords.push(...words);
+    } else {
+      if (currentWords.length > 0) {
+        chunks.push(currentWords.join(' '));
+        const keep = Math.min(overlap, currentWords.length);
+        currentWords = currentWords.slice(currentWords.length - keep);
+      }
+      currentWords.push(...words);
+    }
   }
 
-  return chunks;
+  if (currentWords.length > 0) {
+    chunks.push(currentWords.join(' '));
+  }
+
+  return chunks.length > 0 ? chunks : [text.trim()];
 }
 
-async function extractTextFromPDF(file) {
+async function extractPagesFromPDF(file) {
   logStatus('Memuat file PDF...');
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-  let allText = '';
+  const pages = [];
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
     logStatus(`Mengekstrak teks halaman ${pageNum}/${pdf.numPages}...`);
     const page = await pdf.getPage(pageNum);
     const content = await page.getTextContent();
-    const pageText = content.items.map((item) => item.str).join(' ');
-    allText += `${pageText}\n\n`;
+    const pageText = content.items.map((item) => item.str).join(' ').trim();
+    if (pageText) {
+      pages.push({ pageNum, text: pageText });
+    }
   }
 
-  return allText.trim();
+  return pages;
 }
 
 async function processPdfFile(documentName = '', category = 'public') {
@@ -51,17 +79,33 @@ async function processPdfFile(documentName = '', category = 'public') {
 
   try {
     statusOutput.textContent = '';
-    const text = await extractTextFromPDF(file);
-    logStatus('Membuat chunk teks...');
-    const chunks = chunkText(text, CHUNK_SIZE, CHUNK_OVERLAP);
-    logStatus(`Dibuat ${chunks.length} chunk.`);
+    const pages = await extractPagesFromPDF(file);
+    if (!pages.length) {
+      throw new Error('Tidak ada teks yang dapat diekstrak dari PDF. Pastikan file bukan hasil scan gambar murni.');
+    }
+
+    const docTitle = documentName.trim() || file.name.replace(/\.[^/.]+$/, '');
+    const finalCategory = category === 'private' ? 'private' : 'public';
+    const allChunks = [];
+
+    logStatus('Membuat chunk teks terstruktur dengan header konteks...');
+    for (const p of pages) {
+      const pageChunks = chunkText(p.text, CHUNK_SIZE, CHUNK_OVERLAP);
+      for (const rawChunk of pageChunks) {
+        const chunkWithHeader = `[DOKUMEN: ${docTitle} | HALAMAN: ${p.pageNum} | KATEGORI: ${finalCategory}]\n${rawChunk}`;
+        allChunks.push({
+          text: chunkWithHeader,
+          pdf_name: docTitle,
+          category: finalCategory,
+          metadata: { page: p.pageNum, total_pages: pages.length },
+        });
+      }
+    }
+
+    logStatus(`Dibuat ${allChunks.length} chunk presisi tinggi (ukuran ~${CHUNK_SIZE} kata).`);
 
     const payload = {
-      chunks: chunks.map((chunk) => ({
-        text: chunk,
-        pdf_name: documentName.trim() || file.name,
-        category: category === 'private' ? 'private' : 'public',
-      })),
+      chunks: allChunks,
     };
 
     logStatus('Mengirim chunks ke server backend untuk embedding dan penyimpanan...');

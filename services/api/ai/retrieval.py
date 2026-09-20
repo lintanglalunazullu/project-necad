@@ -10,6 +10,8 @@
 # (pakai index HNSW + FTS yang sudah ada) untuk SEMUA role, termasuk "user" biasa.
 # Fetch-seluruh-tabel + cosine similarity di Python hanya dipakai sebagai FALLBACK
 # kalau RPC gagal (mis. koneksi database bermasalah).
+from __future__ import annotations
+
 import json
 import logging
 import re
@@ -27,10 +29,9 @@ from utils.helpers import extract_response_parts, words
 logger = logging.getLogger("aksaraku.retrieval")
 
 
-
 # ======================= HELPERS =======================
 
-def _parse_embedding(raw: Any) -> list[float] | None:
+def _parse_embedding(raw: Any) -> Optional[list[float]]:
     if isinstance(raw, list):
         return raw
     if isinstance(raw, str):
@@ -417,18 +418,24 @@ class LearnedSynonymsRegistry:
                     # 2. Fallback: baca dari tabel ai_provider_config baris 'learned_synonyms'
                     res = supabase.table(config.AI_CONFIG_TABLE).select("system_prompt_extra").eq("id", "learned_synonyms").limit(1).execute()
                     rows = []
-                    if res.data and res.data[0].get("system_prompt_extra"):
-                        rows = json.loads(res.data[0]["system_prompt_extra"])
+                    data_list = res.data if isinstance(res.data, list) else []
+                    if data_list and isinstance(data_list[0], dict) and data_list[0].get("system_prompt_extra"):
+                        extra_val = str(data_list[0]["system_prompt_extra"])
+                        parsed_val = json.loads(extra_val)
+                        rows = parsed_val if isinstance(parsed_val, list) else []
 
-                new_cache = {}
-                for r in rows:
-                    slang = str(r.get("slang_word") or "").strip().lower()
-                    canonical = str(r.get("canonical_word") or "").strip().lower()
-                    if slang and canonical:
-                        new_cache[slang] = canonical
+                new_cache: dict[str, str] = {}
+                meta_rows: list[dict[str, Any]] = []
+                for r in (rows if isinstance(rows, list) else []):
+                    if isinstance(r, dict):
+                        meta_rows.append(r)
+                        slang = str(r.get("slang_word") or "").strip().lower()
+                        canonical = str(r.get("canonical_word") or "").strip().lower()
+                        if slang and canonical:
+                            new_cache[slang] = canonical
 
                 self._learned_cache = new_cache
-                self._items_metadata = rows
+                self._items_metadata = meta_rows
                 self._last_synced = now
             except Exception as exc:
                 logger.debug("Synonym sync skipped: %s", exc)
@@ -590,7 +597,7 @@ def auto_extract_and_learn_synonyms(
     docs: list[dict],
     answer: str,
     evidence: dict,
-    new_terms: list[dict] = None
+    new_terms: Optional[list[dict]] = None
 ) -> None:
     """Secara otomatis mencatat kosakata gaul/daerah baru yang terbukti berhasil menghasilkan jawaban akurat."""
     if not supabase or not question or not docs:
@@ -763,10 +770,11 @@ def _rpc_keyword_search(
                     qb = qb.in_("category", list(categories))
                 res = qb.ilike("content", f"%{cand_clean}%").limit(top_k).execute()
                 if res.data:
-                    for r in res.data:
+                    data_rows: list[dict] = [dict(r) for r in res.data if isinstance(r, dict)]
+                    for r in data_rows:
                         r["similarity"] = 0.5
                         r["keyword_score"] = 1.0
-                    return res.data
+                    return data_rows
             except Exception as exc:
                 logger.debug("ILIKE fallback search skipped: %s", exc)
 
@@ -780,7 +788,7 @@ def get_similar_documents(
     supabase: Client,
     query_embedding: list[float],
     role: str,
-    top_k: int = None,
+    top_k: Optional[int] = None,
     question: str = "",
 ) -> list[dict]:
     """
@@ -825,7 +833,7 @@ def get_similar_documents(
     )
 
 
-async def hybrid_search(supabase: Client, question: str, top_k: int = None) -> list[dict]:
+async def hybrid_search(supabase: Client, question: str, top_k: Optional[int] = None) -> list[dict]:
     """Hybrid search menggunakan RRF: vector + keyword + exact match (tanpa filter role -
     dipakai hanya untuk pemanggil yang sudah menjamin scope kategori-nya sendiri)."""
     from ai.embedding import embed_query
@@ -841,18 +849,20 @@ async def hybrid_search(supabase: Client, question: str, top_k: int = None) -> l
             config.VECTOR_FUNCTION,
             {"query_embedding": embedding, "match_threshold": config.RAG_MIN_SIMILARITY, "match_count": top_k},
         ).execute()
-        vector_results = response.data or []
-    except Exception as exc:
-        logger.exception("Vector search failed: %s", exc)
+        raw_vec = response.data if isinstance(response.data, list) else []
+        vector_results = [dict(r) for r in raw_vec if isinstance(r, dict)]
+    except Exception:
+        logger.exception("Vector search failed")
 
     keyword_results: list[dict] = []
     try:
         response = supabase.rpc(
             config.KEYWORD_FUNCTION, {"search_query": question, "result_limit": top_k}
         ).execute()
-        keyword_results = response.data or []
-    except Exception as exc:
-        logger.exception("Keyword search failed: %s", exc)
+        raw_kw = response.data if isinstance(response.data, list) else []
+        keyword_results = [dict(r) for r in raw_kw if isinstance(r, dict)]
+    except Exception:
+        logger.exception("Keyword search failed")
 
     exact_results: list[dict] = []
     numbers = re.findall(r"\b\d{3,20}\b", question)
@@ -861,9 +871,10 @@ async def hybrid_search(supabase: Client, question: str, top_k: int = None) -> l
             response = supabase.rpc(
                 config.EXACT_FUNCTION, {"search_term": number, "result_limit": 10}
             ).execute()
-            exact_results.extend(response.data or [])
-        except Exception as exc:
-            logger.exception("Exact search failed: %s", exc)
+            raw_ex = response.data if isinstance(response.data, list) else []
+            exact_results.extend([dict(r) for r in raw_ex if isinstance(r, dict)])
+        except Exception:
+            logger.exception("Exact search failed")
 
     fused = reciprocal_rank_fusion([exact_results, keyword_results, vector_results])
     return fused[:top_k]
@@ -913,7 +924,7 @@ def infer_document_category(filename: str) -> str:
 
 
 def rerank_documents(
-    question: str, docs: list[dict], final_k: int = None
+    question: str, docs: list[dict], final_k: Optional[int] = None
 ) -> list[dict]:
     """Rerank dokumen berdasarkan kombinasi vector similarity, keyword overlap, intent boosting, dan token kelas spesifik."""
     if final_k is None:
@@ -929,7 +940,6 @@ def rerank_documents(
         vector = float(doc.get("similarity") or doc.get("score") or doc.get("similarity_score") or 0)
         overlap = len(qwords & words(content)) / max(1, len(qwords))
 
-        category = str(doc.get("category") or "").lower()
         pdf_name = str(doc.get("pdf_name") or "").lower()
 
         boost = 0.0

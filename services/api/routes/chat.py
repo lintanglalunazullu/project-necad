@@ -266,6 +266,7 @@ def _chat_sync(supabase: Client, body: QueryRequest, authorization: Optional[str
         }
 
     # ========= DOCUMENT INVENTORY SHORTCUT =========
+    reformulation = None
     if _is_document_inventory_question(question):
         from ai.retrieval import fetch_document_summary
         inventory = filter_documents_for_role(fetch_document_summary(supabase), role)
@@ -636,7 +637,7 @@ async def chat_stream(request: Request, body: QueryRequest, authorization: Optio
 
             def _stream_producer():
                 try:
-                    for item in generate_stream_with_fallback(sanitized_q, context, history, force_direct=True):
+                    for item in generate_stream_with_fallback(sanitized_q, context or "", history, force_direct=True):
                         loop.call_soon_threadsafe(queue.put_nowait, item)
                 except Exception as exc:
                     loop.call_soon_threadsafe(queue.put_nowait, {"type": "error", "error": str(exc)})

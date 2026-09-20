@@ -19,11 +19,6 @@ async function logout() {
   if (error) {
     alert('Gagal Logout: ' + error.message);
   } else {
-    const loginPaths = {
-      admin: '../admin/login.html',
-      teacher: '../teacher/login.html',
-      user: '../login.html',
-    };
-    window.location.replace(loginPaths[role] || '../login.html');
+    window.location.replace('../index.html');
   }
 }

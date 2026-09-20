@@ -101,56 +101,27 @@
     window.localStorage.removeItem('aksaraku_chat_session_id');
   }
 
-  function getLoginPath(role) {
+  function getChatPath() {
     var path = window.location.pathname;
-    var inAdmin = /\/admin\//.test(path);
-    var inTeacher = /\/teacher\//.test(path);
-    var inPages = /\/pages\//.test(path);
-
-    if (inAdmin) return role === 'admin' ? './login.html' : '../login.html';
-    if (inTeacher) return role === 'teacher' ? './login.html' : '../login.html';
-
-    if (inPages) {
-      if (role === 'admin') return '../admin/login.html';
-      if (role === 'teacher') return '../teacher/login.html';
-      return '../login.html';
-    }
-
-    if (role === 'admin') return './admin/login.html';
-    if (role === 'teacher') return './teacher/login.html';
-    return './login.html';
+    var inSubdir = /\/(admin|teacher|pages)\//.test(path);
+    return inSubdir ? '../index.html' : './index.html';
   }
 
   async function performLogout() {
     var client = window.createAksarakuClient ? window.createAksarakuClient() : null;
-    var role = 'user';
 
     if (client) {
-      var sessionResult = await client.auth.getSession();
-      var user = sessionResult.data && sessionResult.data.session ? sessionResult.data.session.user : null;
-      if (user) {
-        try {
-          var profile = await client
-            .from('profiles')
-            .select('role')
-            .eq('id', user.id)
-            .maybeSingle();
-          if (profile && profile.data) role = profile.data.role;
-        } catch (error) {
-          /* fallback ke user */
+      try {
+        var result = await client.auth.signOut({ scope: 'global' });
+        if (result.error) {
+          console.warn('Supabase signOut warning:', result.error.message);
         }
-      }
-    }
-
-    if (client) {
-      var result = await client.auth.signOut({ scope: 'global' });
-      if (result.error) {
-        alert('Gagal Logout: ' + result.error.message);
-        throw result.error;
+      } catch (err) {
+        console.warn('Error during signOut:', err);
       }
     }
 
     clearLocalSession();
-    window.location.replace(getLoginPath(role));
+    window.location.replace(getChatPath());
   }
 })();

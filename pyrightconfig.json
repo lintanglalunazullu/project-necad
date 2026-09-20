@@ -1,0 +1,8 @@
+{
+  "include": [
+    "services/api"
+  ],
+  "extraPaths": [
+    "services/api"
+  ]
+}

@@ -8,7 +8,7 @@ from typing import Optional
 from fastapi import APIRouter, Header, HTTPException
 from supabase import Client
 
-from auth import authenticated_user
+from auth import authenticated_user, allowed_categories
 from models import DocumentRenameRequest, DocumentSummaryRequest, EmbedUpsertRequest, OCRPageRequest
 from ai.embedding import embed_text, validate_embedding
 from ai.retrieval import fetch_document_summary
@@ -112,7 +112,8 @@ async def list_documents(authorization: Optional[str] = Header(default=None)):
     docs = fetch_document_summary(supabase)
 
     if role not in {"admin", "teacher"}:
-        docs = [d for d in docs if str(d.get("category") or "public").lower() == "public"]
+        allowed = set(allowed_categories(role))
+        docs = [d for d in docs if str(d.get("category") or "").strip().lower() in allowed]
 
     return {"data": docs}
 
@@ -163,7 +164,8 @@ async def rename_document(
 
     payload: dict = {"pdf_name": new_name}
     if body.category is not None:
-        payload["category"] = body.category
+        valid_cat = "private" if str(body.category).strip().lower() == "private" else "public"
+        payload["category"] = valid_cat
 
     response = (
         supabase.table(config.SUPABASE_TABLE)
@@ -175,7 +177,7 @@ async def rename_document(
     if parts["error"]:
         raise HTTPException(500, str(parts["error"]))
 
-    return {"data": {"id": new_name, "name": new_name, "pdf_name": new_name}}
+    return {"data": {"id": new_name, "name": new_name, "pdf_name": new_name, "category": payload.get("category", "public")}}
 
 
 @router.delete("/documents/{document_id}")
@@ -233,20 +235,19 @@ async def embed_upsert(
         if not content:
             raise HTTPException(400, "content tidak boleh kosong")
         pdf_name = chunk.pdf_name or None
-        cat = chunk.category
-        if (not cat or str(cat).lower() == "public") and pdf_name:
-            from ai.retrieval import infer_document_category
-            inferred = infer_document_category(pdf_name)
-            if inferred != "public":
-                cat = inferred
+        cat = "private" if str(chunk.category).strip().lower() == "private" else "public"
 
         row: dict = {
             "content": content,
             "pdf_name": pdf_name,
-            "category": cat or "public",
+            "category": cat,
         }
-        if chunk.metadata is not None and config.SUPABASE_USE_METADATA:
-            row[config.SUPABASE_METADATA_COLUMN] = chunk.metadata
+        if config.SUPABASE_USE_METADATA:
+            from ai.retrieval import infer_document_category
+            meta = dict(chunk.metadata or {})
+            if pdf_name and "topic" not in meta:
+                meta["topic"] = infer_document_category(pdf_name)
+            row[config.SUPABASE_METADATA_COLUMN] = meta
         row["embedding"] = chunk.embedding if chunk.embedding is not None else embed_text(content)
         if not validate_embedding(row["embedding"]):
             raise HTTPException(400, f"Invalid embedding vector; expected {config.EXPECTED_EMBEDDING_DIMENSION} dimensions")

@@ -109,8 +109,9 @@ def filter_rpc_documents_for_role(
     """
     if role in {"teacher", "admin"}:
         return filter_documents_for_role(documents, role)
+    allowed = set(allowed_categories(role))
     return [
         doc
         for doc in documents
-        if str(doc.get("category") or "").strip().lower() == "public"
+        if str(doc.get("category") or "").strip().lower() in allowed
     ]

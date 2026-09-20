@@ -408,6 +408,60 @@ class TestAuth:
         result = filter_rpc_documents_for_role(docs, "admin")
         assert len(result) == 2
 
+    def test_filter_rpc_teacher_sees_all(self):
+        docs = [
+            {"id": 1, "category": "public", "content": "boleh"},
+            {"id": 2, "category": "private", "content": "rahasia"},
+        ]
+        result = filter_rpc_documents_for_role(docs, "teacher")
+        assert len(result) == 2
+
+    def test_filter_rpc_anonymous_blocks_private(self):
+        docs = [
+            {"id": 1, "category": "public", "content": "boleh"},
+            {"id": 2, "category": "private", "content": "rahasia"},
+            {"id": 3, "category": "ppdb", "content": "info ppdb"},
+        ]
+        result = filter_rpc_documents_for_role(docs, "anonymous")
+        assert len(result) == 2
+        assert all(d["category"] != "private" for d in result)
+
+    def test_filter_rpc_blocks_missing_category_for_user(self):
+        docs = [
+            {"id": 1, "category": "public", "content": "boleh"},
+            {"id": 2, "category": None, "content": "tanpa kategori"},
+            {"id": 3, "category": "", "content": "kategori kosong"},
+        ]
+        result = filter_rpc_documents_for_role(docs, "user")
+        assert len(result) == 1
+        assert result[0]["id"] == 1
+
+    def test_document_category_transition_simulation(self):
+        """Simulasikan dokumen yang diubah dari public -> private -> public dan cek akses role-nya."""
+        doc_item = {"id": 10, "pdf_name": "pengumuman.pdf", "category": "public", "content": "jadwal libur"}
+        
+        # User & anonymous bisa akses dokumen public
+        assert len(filter_rpc_documents_for_role([doc_item], "user")) == 1
+        assert len(filter_rpc_documents_for_role([doc_item], "anonymous")) == 1
+        
+        # Diubah ke private oleh admin/teacher
+        doc_item["category"] = "private"
+        
+        # User & anonymous terblokir secara instan
+        assert len(filter_rpc_documents_for_role([doc_item], "user")) == 0
+        assert len(filter_rpc_documents_for_role([doc_item], "anonymous")) == 0
+        
+        # Teacher & admin tetap bisa akses dokumen private
+        assert len(filter_rpc_documents_for_role([doc_item], "teacher")) == 1
+        assert len(filter_rpc_documents_for_role([doc_item], "admin")) == 1
+        
+        # Diubah kembali ke public
+        doc_item["category"] = "public"
+        
+        # User & anonymous kembali bisa akses
+        assert len(filter_rpc_documents_for_role([doc_item], "user")) == 1
+        assert len(filter_rpc_documents_for_role([doc_item], "anonymous")) == 1
+
 
 class TestResponseCache:
     def test_cache_set_and_get(self):
@@ -755,6 +809,46 @@ class TestDocumentIntelligenceAndOCR:
         assert res.status_code == 200
         # Verify delete was called for the pdf_name to prevent duplicate/stale chunks
         mock_sb.table.return_value.delete.return_value.eq.assert_called_with("pdf_name", "Tata_Tertib_2026")
+
+    def test_rename_document_switch_category_to_private(self, monkeypatch):
+        from fastapi.testclient import TestClient
+        from app import app
+        from unittest.mock import MagicMock
+
+        monkeypatch.setattr("routes.documents.authenticated_user", lambda sb, auth: ("teacher_id", "teacher"))
+        mock_sb = MagicMock()
+        mock_sb.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value = MagicMock(
+            data=[{"pdf_name": "Tata_Tertib_2026"}], error=None
+        )
+        mock_sb.table.return_value.update.return_value.eq.return_value.execute.return_value = MagicMock(
+            data=[{"pdf_name": "Tata_Tertib_2026", "category": "private"}], error=None
+        )
+        monkeypatch.setattr("routes.documents._get_supabase", lambda: mock_sb)
+
+        client = TestClient(app)
+        res = client.put(
+            "/documents/Tata_Tertib_2026",
+            json={"category": "private"},
+            headers={"Authorization": "Bearer mock-teacher-token"}
+        )
+        assert res.status_code == 200
+        data = res.json()
+        assert data["data"]["category"] == "private"
+        mock_sb.table.return_value.update.assert_called_with({"pdf_name": "Tata_Tertib_2026", "category": "private"})
+
+    def test_rename_document_forbidden_for_user(self, monkeypatch):
+        from fastapi.testclient import TestClient
+        from app import app
+
+        monkeypatch.setattr("routes.documents.authenticated_user", lambda sb, auth: ("user_id", "user"))
+
+        client = TestClient(app)
+        res = client.put(
+            "/documents/Tata_Tertib_2026",
+            json={"category": "private"},
+            headers={"Authorization": "Bearer mock-user-token"}
+        )
+        assert res.status_code == 403
 
 
 if __name__ == "__main__":

@@ -8,6 +8,8 @@
   function openSidebar() {
     sidebar.classList.remove('hidden');
     sidebar.classList.add('flex');
+    sidebar.style.display = 'flex';
+    toggleBtn.setAttribute('aria-expanded', 'true');
     if (overlay) {
       overlay.classList.remove('hidden');
     }
@@ -17,6 +19,8 @@
   function closeSidebar() {
     sidebar.classList.add('hidden');
     sidebar.classList.remove('flex');
+    sidebar.style.removeProperty('display');
+    toggleBtn.setAttribute('aria-expanded', 'false');
     if (overlay) {
       overlay.classList.add('hidden');
     }

@@ -36,6 +36,60 @@
     #documentsTable_wrapper .dt-info, #documentsTable_wrapper .dt-length, #documentsTable_wrapper .dt-search { color: #94a3b8; font-size: .8rem; }
     #documentsTable_wrapper .dt-paging-button { color: #cbd5e1 !important; }
     #documentsTable_wrapper .dt-paging-button.current { background: #0B2545 !important; border-color: #0B2545 !important; color: white !important; }
+
+    @media (max-width: 640px) {
+      #documentsTable_wrapper .overflow-x-auto { overflow: visible; }
+      #documentsTable { display: block; width: 100% !important; }
+      #documentsTable thead { display: none; }
+      #documentsTable tbody,
+      #documentsTable tr,
+      #documentsTable td { display: block; width: 100% !important; }
+      #documentsTable tbody tr {
+        margin-bottom: .75rem;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, .1);
+        border-radius: .75rem;
+        background: rgba(2, 6, 23, .55);
+      }
+      #documentsTable tbody tr:last-child { margin-bottom: 0; }
+      #documentsTable tbody td {
+        min-height: 2.75rem;
+        padding: .7rem .8rem;
+        border-bottom: 1px solid rgba(255, 255, 255, .07);
+        vertical-align: middle;
+        overflow-wrap: anywhere;
+      }
+      #documentsTable tbody td::before {
+        display: block;
+        margin-bottom: .2rem;
+        color: #8b8f9a;
+        content: '';
+        font-size: .65rem;
+        font-weight: 700;
+        letter-spacing: .08em;
+        line-height: 1.2;
+        text-transform: uppercase;
+      }
+      #documentsTable tbody td:nth-child(1)::before { content: 'Nama dokumen'; }
+      #documentsTable tbody td:nth-child(2)::before { content: 'Kategori'; }
+      #documentsTable tbody td:nth-child(3)::before { content: 'Jumlah chunk'; }
+      #documentsTable tbody td:nth-child(4)::before { content: 'Dibuat'; }
+      #documentsTable tbody td:nth-child(5)::before { content: 'Status'; }
+      #documentsTable tbody td:nth-child(6)::before { content: 'Aksi'; }
+      #documentsTable tbody td:last-child { border-bottom: 0; }
+      #documentsTable tbody td:nth-child(1) > div:first-child { font-size: .9rem; }
+      #documentsTable tbody td:nth-child(6) > div { display: flex; flex-wrap: wrap; gap: .5rem; }
+      #documentsTable tbody td:nth-child(6) button { flex: 1 1 7rem; min-height: 2.25rem; }
+      #documentsTable_wrapper .dt-layout-row { align-items: stretch; display: flex; flex-direction: column; gap: .75rem; margin: .75rem 0; }
+      #documentsTable_wrapper .dt-layout-cell { min-width: 0; width: 100%; }
+      #documentsTable_wrapper .dt-search, #documentsTable_wrapper .dt-length, #documentsTable_wrapper .dt-info, #documentsTable_wrapper .dt-paging { text-align: left; width: 100%; }
+      #documentsTable_wrapper .dt-search input { max-width: calc(100% - 3rem); }
+      #documentsTable_wrapper .dt-paging { width: 100%; }
+      #documentsTable_wrapper .dt-paging nav,
+      #documentsTable_wrapper .dt-paging nav[aria-label="pagination"] { display: flex !important; flex-wrap: wrap; gap: .35rem; justify-content: flex-start; width: 100%; }
+      #documentsTable_wrapper .dt-paging-button { align-items: center; display: inline-flex !important; flex: 0 0 auto; justify-content: center; min-height: 2.25rem; padding: .45rem .7rem !important; position: static !important; white-space: nowrap; }
+      #documentsTable_wrapper .dt-paging-button.previous, #documentsTable_wrapper .dt-paging-button.next { flex: 1 1 7rem; max-width: 50%; }
+    }
   </style>
 </head>
 <body class="bg-workspace text-[#F3F4F6] antialiased">
